@@ -1,0 +1,9 @@
+interface:
+  display_name: "Experience Loop"
+  short_description: "Delivery-first engineering learning with evidence and transfer"
+  icon_small: "./assets/icon-small.svg"
+  icon_large: "./assets/icon-large.svg"
+  default_prompt: "Use $experience-loop to finish the current development task while turning key decisions, verification, and reflection into transferable engineering experience."
+
+policy:
+  allow_implicit_invocation: true
