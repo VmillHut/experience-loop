@@ -1,0 +1,41 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.pytest_cache/
+.coverage
+htmlcov/
+.mypy_cache/
+.ruff_cache/
+.venv/
+venv/
+build/
+dist/
+*.egg-info/
+
+# Secrets and local environment files
+.env
+.env.*
+!.env.example
+!.env.template
+
+# Local Experience Loop state and test sandboxes
+.experience-loop/
+.tmp-experience-loop/
+experience-loop-data/
+*.experience-loop-export.zip
+
+# Editors and operating systems
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Logs and temporary files
+*.log
+*.tmp
+*.bak
+~$*
