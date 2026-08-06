@@ -150,7 +150,10 @@ class VerifyReleaseTests(unittest.TestCase):
 
     def test_vendor_check_rejects_unmanifested_wheel_and_missing_license(self) -> None:
         with tempfile.TemporaryDirectory(prefix="experience-loop-release-vendor-") as raw:
-            root = Path(raw)
+            base = Path(raw)
+            (base / "alias").mkdir()
+            # Keep the root lexical form non-canonical to cover path aliases.
+            root = base / "alias" / ".."
             wheels = root / "vendor" / "wheels"
             wheels.mkdir(parents=True)
             (root / "licenses").mkdir()
