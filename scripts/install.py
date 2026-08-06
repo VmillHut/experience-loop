@@ -316,6 +316,11 @@ def lifecycle_commands(
     source: Path, target: Path, backup: Optional[Path]
 ) -> dict[str, Optional[str]]:
     python = Path(sys.executable).resolve()
+    # These paths exist when commands are rendered, so expand Windows 8.3 aliases.
+    source = source.resolve()
+    target = target.resolve()
+    if backup is not None:
+        backup = backup.resolve()
     commands: dict[str, Optional[str]] = {
         "status": _quoted_command(
             [python, target / "scripts" / "experience_loop.py", "status"]

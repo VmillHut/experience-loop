@@ -398,6 +398,7 @@ def _relative_to(path: Path, parent: Path) -> bool:
 
 
 def check_vendor(root: Path = ROOT) -> list[str]:
+    root = root.resolve()
     errors: list[str] = []
     vendor_root = (root / "vendor").resolve()
     wheels_root = (vendor_root / "wheels").resolve()
