@@ -19,14 +19,14 @@ END = "<!-- experience-loop:router:end -->"
 ROUTER = f"""{START}
 For substantive software-development work, apply `$experience-loop` when a
 reusable human judgment may justify the interaction cost. Resolve an explicitly
-saved mode; otherwise implicit use starts in `auto` and chooses silence,
-embedded guidance, one checkpoint, or at most two short checkpoints from
-consequence, uncertainty, transfer value, user profile, time pressure, and
-interaction cost. Do not invoke it for mechanical or simple factual work, an
-explicit "delivery only" request, or `off`. During urgent recovery, use the
-normal delivery fast path without learning interruptions. Never infer `focus`
-or `deep` from complexity. One learning seam must not narrow engineering or
-verification coverage.
+saved mode; otherwise implicit use starts in `auto` and intelligently chooses
+silence, embedded guidance, an optional checkpoint, a required judgment
+checkpoint, or a short guided practice loop from consequence, uncertainty,
+transfer value, user profile, time pressure, and interaction cost. A required
+checkpoint may briefly wait only when participation is valuable and safe; honor
+"skip", "just do it", urgent recovery, explicit "delivery only", and `off`
+immediately. Never infer a standing `focus` or `deep` contract from complexity.
+One learning seam must not narrow engineering or verification coverage.
 {END}
 """
 

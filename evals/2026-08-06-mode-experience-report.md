@@ -1,5 +1,7 @@
 # Mode experience evaluation — 2026-08-06
 
+> Historical result for the pre-redesign `auto` contract. It intentionally records a non-blocking controller and is superseded by later evaluations that allow required judgment checkpoints and short guided practice loops.
+
 This report records a queued, three-round simulation with two recurring user agents. Each condition used a fresh copy prepared by `evals/prepare_trial.py`; the Skill repository itself was read-only during the trials.
 
 ## Results

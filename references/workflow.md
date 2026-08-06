@@ -41,7 +41,7 @@ Infer these signals from the request and visible evidence. Do not ask the user t
 | Uncertainty | ambiguous outcome, unfamiliar boundary, competing causes, weak tests | inspect first; ask one blocking question only if the answer changes the deliverable |
 | Transfer value | recurring responsibility, reusable mechanism, weak prior evidence | increase the potential benefit of a learning intervention |
 | Profile relevance | explicit goal, current responsibility or domain, repeated verified evidence | prefer the learning seam that compounds the user's real work; never narrow engineering coverage |
-| Interaction cost | context switching, user waiting, long explanation, repeated questions | prefer silence or embedded guidance when interruption cost outweighs future value |
+| Interaction cost | context switching, user waiting, long explanation, repeated questions | prefer silence or embedded guidance when interruption cost outweighs future value; permit a bounded pause when participation clearly pays back |
 
 Apply this decision order:
 
@@ -49,7 +49,7 @@ Apply this decision order:
 2. Restore health or protect the deadline.
 3. Match verification depth to consequence and failure mode.
 4. Resolve material ambiguity.
-5. Estimate the net user value of silence, embedded guidance, or a checkpoint from all six signals.
+5. Estimate the net user value of silence, embedded guidance, an optional checkpoint, a required judgment checkpoint, or a short guided practice loop from all six signals.
 6. Use at most one learning seam without limiting the engineering concerns inspected.
 7. Stay silent when no durable value remains, and never infer `deep` from a high score or high-risk task.
 
@@ -72,15 +72,16 @@ Use the fast path before loading content-bearing learning state or references wh
 
 1. State the outcome and acceptance evidence, then inspect and execute normally.
 2. Weigh consequence, uncertainty, transfer value, profile relevance, time pressure, and interaction cost.
-3. Choose one of four intervention levels:
+3. Choose the intervention with the highest expected net user value. Prefer the lighter option only when expected value is otherwise comparable:
    - **silent** — no learning addition;
    - **embedded** — explain one useful mechanism or evidence boundary without interrupting;
-   - **one checkpoint** — invite one skippable prediction, trade-off, or acceptance judgment;
-   - **two short checkpoints** — use only when the opportunity is unusually valuable, pressure is low, and the extra interruption clearly pays for itself.
+   - **optional checkpoint** — invite a prediction, trade-off, or acceptance judgment but continue if the user does not engage;
+   - **required judgment checkpoint** — briefly wait for a concise answer because making and later testing that judgment is the valuable practice;
+   - **short guided practice loop** — sequence a bounded prediction, evidence comparison, and correction within one learning seam when the added transfer value clearly pays for the interaction.
 4. Validate with risk-appropriate evidence and preserve cognitive coverage.
 5. End with at most one reusable cue when one truly emerged.
 
-Require zero learning answers and proceed immediately if a checkpoint is skipped. `auto` may strengthen verification or review for consequential work, but it must never silently become `focus` or `deep`.
+Do not set a universal answer count. A required checkpoint is justified only when the target is human judgment rather than trivia, the answer can be compared against evidence, and delay is safe. The user can always override with “skip,” “just do it,” or `off`; then proceed and lower later interruption. `auto` may become locally intensive when that has positive net value, but it must never silently create the standing goal contract of `focus` or the open-depth contract of `deep`.
 
 ### Focus
 
@@ -157,7 +158,7 @@ Skip a checkpoint when the task is mechanical, the answer is already obvious, th
 
 ## Prediction and decision checkpoints
 
-Ask before revealing decisive evidence in `focus` or `deep`, or as an optional challenge in `auto`, only when the pause adds value. Never hide safety-critical or delivery-critical information.
+Ask before revealing noncritical decisive evidence in `focus`, `deep`, or an `auto` checkpoint only when the pause adds value. In `auto`, mark the prompt as optional or required through the conversational behavior: continue immediately for optional prompts; briefly wait for required judgment prompts. Never hide safety-critical or delivery-critical information.
 
 Good prompts take under a minute to answer:
 
@@ -169,7 +170,7 @@ Good prompts take under a minute to answer:
 
 Bad prompts test trivia, require long essays, repeat known facts, ask the user to guess tool-discoverable information, or delay an urgent fix.
 
-If the user does not answer an optional checkpoint, proceed immediately with a stated hypothesis. Do not ask again.
+If the user does not answer an optional checkpoint, proceed immediately with a stated hypothesis. If the user explicitly skips a required checkpoint, proceed without penalty and adapt later intervention downward. Do not ask the same question again.
 
 For consequential choices, capture:
 

@@ -1,9 +1,9 @@
 interface:
   display_name: "Experience Loop"
-  short_description: "Net-value engineering growth with explicit focus and deep modes"
+  short_description: "Adaptive engineering growth without lowering task quality"
   icon_small: "./assets/icon-small.svg"
   icon_large: "./assets/icon-large.svg"
-  default_prompt: "Use $experience-loop with task quality first. Honor an explicitly saved mode; otherwise use auto and choose silence, embedded guidance, or at most two skippable checkpoints by expected net user value. Take the fast path for mechanical, urgent, or delivery-only work, honor off with no learning tail, and never infer focus or deep from complexity."
+  default_prompt: "Use $experience-loop with task quality first. Honor an explicitly saved mode; otherwise let auto intelligently choose silence, embedded guidance, an optional checkpoint, a required judgment checkpoint, or a short guided practice loop by expected net user value. A required checkpoint may briefly wait only when participation is valuable and safe; immediately honor skip, just-do-it, urgent recovery, or off. Never infer a standing focus or deep contract from complexity."
 
 policy:
   allow_implicit_invocation: true

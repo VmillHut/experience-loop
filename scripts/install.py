@@ -8,15 +8,18 @@ skill directory and is therefore untouched by installs and upgrades.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import os
-from pathlib import Path
+from pathlib import Path, PurePosixPath
+import shlex
 import shutil
 import stat
+import subprocess
 import sys
 import tempfile
 from datetime import datetime, timezone
-from typing import Any, Optional, Union
+from typing import Any, Optional
 from uuid import uuid4
 
 
@@ -34,13 +37,41 @@ RUNTIME_ENTRIES = (
     "THIRD_PARTY_NOTICES.md",
 )
 MARKER_NAME = ".experience-loop-install.json"
-REQUIRED_INSTALL_FILES = (
+CURRENT_RUNTIME_CONTRACT = 1
+COMPATIBLE_INSTALL_FILES = (
     "SKILL.md",
     "VERSION",
     "agents/openai.yaml",
+    "assets/icon-large.svg",
+    "assets/icon-small.svg",
+    "references/capability-compass.md",
+    "references/experience-model.md",
+    "references/knowledge-lens.md",
+    "references/safety-and-privacy.md",
+    "references/setup-and-profiles.md",
+    "references/workflow.md",
     "scripts/experience_loop.py",
+    "scripts/experience_loop_lib/__init__.py",
+    "scripts/experience_loop_lib/archive.py",
+    "scripts/experience_loop_lib/cli.py",
+    "scripts/experience_loop_lib/common.py",
+    "scripts/experience_loop_lib/extractors.py",
+    "scripts/experience_loop_lib/knowledge.py",
+    "scripts/experience_loop_lib/ledger.py",
+    "scripts/experience_loop_lib/path_policy.py",
+    "scripts/experience_loop_lib/profile.py",
+    "scripts/experience_loop_lib/project.py",
+    "scripts/experience_loop_lib/storage.py",
+    "scripts/install.py",
     "scripts/uninstall.py",
+    "vendor/manifest.json",
 )
+CURRENT_SOURCE_REQUIRED_FILES = COMPATIBLE_INSTALL_FILES + (
+    "references/onboarding.md",
+)
+RUNTIME_CONTRACT_FILES = {
+    CURRENT_RUNTIME_CONTRACT: CURRENT_SOURCE_REQUIRED_FILES,
+}
 BACKUP_DIRECTORY_NAME = "skill-backups"
 
 
@@ -74,13 +105,117 @@ def repo_root() -> Path:
     return Path(__file__).resolve().parent.parent
 
 
+def read_version(root: Path) -> str:
+    return (root / "VERSION").read_text(encoding="utf-8").strip()
+
+
+def onboarding_prompt(target: Path) -> str:
+    reference = (target / "references" / "onboarding.md").resolve()
+    return (
+        "$experience-loop 已安装。请先检查是否已经初始化；若尚未初始化，读取 "
+        f'"{reference}" 并开始对话式初始化。所有画像问题都可跳过，最后询问我'
+        "是否需要约 2 分钟的使用教学；若已经初始化，请保留现有画像且不要重复"
+        "新手教学，除非我明确要求。"
+    )
+
+
+def source_provenance(root: Path) -> dict[str, Any]:
+    result: dict[str, Any] = {
+        "path": str(root.resolve()),
+        "repository": None,
+        "commit": None,
+        "dirty": None,
+        "git_note": None,
+    }
+    try:
+        top_level = subprocess.run(
+            ["git", "-C", str(root), "rev-parse", "--show-toplevel"],
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            capture_output=True,
+            check=False,
+        )
+    except OSError as exc:
+        result["git_note"] = f"Git metadata unavailable: {exc}"
+        return result
+    if top_level.returncode != 0 or not top_level.stdout.strip():
+        result["git_note"] = (
+            top_level.stderr.strip() or "Source is not a standalone Git checkout"
+        )
+        return result
+    discovered_root = Path(top_level.stdout.strip()).resolve()
+    if not _same_path(discovered_root, root.resolve()):
+        result["git_note"] = (
+            f"Source is inside a different Git worktree: {discovered_root}"
+        )
+        return result
+
+    commands = {
+        "repository": [
+            "git",
+            "-C",
+            str(root),
+            "config",
+            "--get",
+            "remote.origin.url",
+        ],
+        "commit": ["git", "-C", str(root), "rev-parse", "HEAD"],
+    }
+    failures = []
+    for field, command in commands.items():
+        try:
+            completed = subprocess.run(
+                command,
+                text=True,
+                encoding="utf-8",
+                errors="replace",
+                capture_output=True,
+                check=False,
+            )
+        except OSError as exc:
+            failures.append(f"{field}: {exc}")
+            continue
+        if completed.returncode == 0 and completed.stdout.strip():
+            result[field] = completed.stdout.strip()
+        else:
+            detail = completed.stderr.strip() or "Git metadata unavailable"
+            failures.append(f"{field}: {detail}")
+    try:
+        completed = subprocess.run(
+            ["git", "-C", str(root), "status", "--porcelain"],
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            capture_output=True,
+            check=False,
+        )
+    except OSError as exc:
+        failures.append(f"dirty: {exc}")
+    else:
+        if completed.returncode == 0:
+            result["dirty"] = bool(completed.stdout.strip())
+        else:
+            detail = completed.stderr.strip() or "Git worktree status unavailable"
+            failures.append(f"dirty: {detail}")
+    if failures:
+        result["git_note"] = "; ".join(failures)
+    return result
+
+
 def validate_source(root: Path) -> None:
-    required = tuple(root / relative for relative in REQUIRED_INSTALL_FILES)
-    missing = [str(path) for path in required if not path.is_file()]
-    if missing:
-        raise RuntimeError("Skill source is incomplete: " + ", ".join(missing))
+    problems = [
+        problem
+        for relative in CURRENT_SOURCE_REQUIRED_FILES
+        if (problem := required_file_validation_error(root, relative)) is not None
+    ]
+    if problems:
+        raise RuntimeError("Skill source is incomplete or unsafe: " + "; ".join(problems))
     if read_skill_name(root) != SKILL_NAME:
         raise RuntimeError(f"Skill source does not declare name: {SKILL_NAME}")
+    vendor_error = vendor_bundle_validation_error(root)
+    if vendor_error is not None:
+        raise RuntimeError(vendor_error)
 
 
 def normalized_target(path: Path) -> Path:
@@ -104,6 +239,77 @@ def _is_reparse_point(path: Path) -> bool:
     attributes = getattr(value, "st_file_attributes", 0)
     reparse_flag = getattr(stat, "FILE_ATTRIBUTE_REPARSE_POINT", 0)
     return bool(reparse_flag and attributes & reparse_flag)
+
+
+def required_file_validation_error(root: Path, relative: str) -> Optional[str]:
+    """Reject missing files and reparse points in every path component."""
+
+    relative_path = Path(relative)
+    if relative_path.is_absolute() or ".." in relative_path.parts:
+        return f"Unsafe required path: {relative}"
+    current = root
+    for part in relative_path.parts:
+        current = current / part
+        if _is_reparse_point(current):
+            return f"Required path contains a symlink, junction, or reparse point: {relative}"
+    if not current.is_file():
+        return f"Required file is missing: {relative}"
+    return None
+
+
+def vendor_bundle_validation_error(root: Path) -> Optional[str]:
+    """Statically validate bundled wheels and licenses without importing backup code."""
+
+    manifest_problem = required_file_validation_error(root, "vendor/manifest.json")
+    if manifest_problem is not None:
+        return manifest_problem
+    manifest_path = root / "vendor" / "manifest.json"
+    try:
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        return f"vendor/manifest.json is invalid: {exc}"
+    packages = manifest.get("packages") if isinstance(manifest, dict) else None
+    if not isinstance(packages, list):
+        return "vendor/manifest.json packages must be a list."
+    for index, package in enumerate(packages):
+        if not isinstance(package, dict):
+            return f"Vendor package entry {index} is not an object."
+        relative_file = package.get("file")
+        relative_license = package.get("license_file")
+        expected_hash = package.get("sha256")
+        if not all(
+            isinstance(value, str) and value.strip()
+            for value in (relative_file, relative_license, expected_hash)
+        ):
+            return f"Vendor package entry {index} has incomplete file metadata."
+        wheel_manifest_path = PurePosixPath(relative_file)
+        license_manifest_path = PurePosixPath(relative_license)
+        if (
+            wheel_manifest_path.is_absolute()
+            or ".." in wheel_manifest_path.parts
+            or not wheel_manifest_path.parts
+            or wheel_manifest_path.parts[0] != "wheels"
+            or wheel_manifest_path.suffix.lower() != ".whl"
+        ):
+            return f"Vendored artifact path is unsafe: {relative_file}"
+        if (
+            license_manifest_path.is_absolute()
+            or len(license_manifest_path.parts) < 3
+            or license_manifest_path.parts[:2] != ("..", "licenses")
+            or ".." in license_manifest_path.parts[2:]
+        ):
+            return f"Vendor license path is unsafe: {relative_license}"
+        wheel_relative = Path("vendor", *wheel_manifest_path.parts)
+        license_relative = Path("licenses", *license_manifest_path.parts[2:])
+        for relative in (wheel_relative, license_relative):
+            problem = required_file_validation_error(root, str(relative))
+            if problem is not None:
+                return problem
+        wheel = root / wheel_relative
+        digest = hashlib.sha256(wheel.read_bytes()).hexdigest()
+        if digest != expected_hash.lower():
+            return f"Bundled wheel hash mismatch: {relative_file}"
+    return None
 
 
 def validate_target_path(path: Path) -> Path:
@@ -163,12 +369,26 @@ def read_marker(path: Path) -> Optional[dict[str, Any]]:
     return value
 
 
+def required_files_for_marker(
+    marker: dict[str, Any],
+) -> tuple[Optional[tuple[str, ...]], Optional[str]]:
+    contract = marker.get("runtime_contract")
+    if contract is None:
+        return COMPATIBLE_INSTALL_FILES, None
+    files = RUNTIME_CONTRACT_FILES.get(contract)
+    if files is None:
+        return None, f"Unsupported runtime contract in install marker: {contract!r}."
+    return files, None
+
+
 def has_required_runtime(path: Path) -> bool:
-    for relative in REQUIRED_INSTALL_FILES:
-        item = path / relative
-        if not item.is_file() or _is_reparse_point(item):
+    for relative in COMPATIBLE_INSTALL_FILES:
+        if required_file_validation_error(path, relative) is not None:
             return False
-    return read_skill_name(path) == SKILL_NAME
+    return (
+        read_skill_name(path) == SKILL_NAME
+        and vendor_bundle_validation_error(path) is None
+    )
 
 
 def managed_install_validation_error(path: Path) -> Optional[str]:
@@ -176,20 +396,27 @@ def managed_install_validation_error(path: Path) -> Optional[str]:
         return "The target is not a directory."
     if _is_reparse_point(path):
         return "The target is a symlink, junction, or reparse point."
-    if read_marker(path) is None:
+    marker = read_marker(path)
+    if marker is None:
         return (
             f"{MARKER_NAME} is missing, invalid JSON, or does not declare "
             f"skill == {SKILL_NAME}."
         )
+    required_files, contract_error = required_files_for_marker(marker)
+    if contract_error is not None or required_files is None:
+        return contract_error
     if read_skill_name(path) != SKILL_NAME:
         return f"SKILL.md does not declare name: {SKILL_NAME}."
-    missing = [
-        relative
-        for relative in REQUIRED_INSTALL_FILES
-        if not (path / relative).is_file() or _is_reparse_point(path / relative)
+    problems = [
+        problem
+        for relative in required_files
+        if (problem := required_file_validation_error(path, relative)) is not None
     ]
-    if missing:
-        return "Required installed files are missing or unsafe: " + ", ".join(missing)
+    if problems:
+        return "Required installed files are missing or unsafe: " + "; ".join(problems)
+    vendor_error = vendor_bundle_validation_error(path)
+    if vendor_error is not None:
+        return vendor_error
     return None
 
 
@@ -302,48 +529,117 @@ def copy_runtime(source: Path, staging: Path) -> None:
         "installed_at": datetime.now(timezone.utc).isoformat(),
         "source": str(source),
         "installer_version": 2,
+        "runtime_contract": CURRENT_RUNTIME_CONTRACT,
     }
     (staging / MARKER_NAME).write_text(
         json.dumps(marker, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
     )
 
 
-def _quoted_command(parts: list[Union[Path, str]]) -> str:
-    return " ".join(f'"{str(part)}"' for part in parts)
+def _quoted_command(parts: list[str]) -> str:
+    if os.name == "nt":
+        quoted = ["'" + part.replace("'", "''") + "'" for part in parts]
+        return "& " + " ".join(quoted)
+    return shlex.join(parts)
+
+
+def rollback_source_error(backup: Optional[Path]) -> Optional[str]:
+    if backup is None:
+        return None
+    if (backup / MARKER_NAME).exists():
+        return managed_install_validation_error(backup)
+    if not is_legacy_install(backup):
+        return (
+            "The backup is not a recognized managed or legacy Experience Loop "
+            "install with a complete installer."
+        )
+    return None
+
+
+def rollback_note(backup: Optional[Path]) -> Optional[str]:
+    error = rollback_source_error(backup)
+    if error is None:
+        return None
+    return (
+        f"Backup was preserved at {backup}, but no executable rollback command was "
+        f"issued because the backup is not a self-contained install source: {error}"
+    )
+
+
+def lifecycle_argv(
+    source: Path, target: Path, backup: Optional[Path]
+) -> dict[str, Optional[list[str]]]:
+    python = str(Path(sys.executable).resolve())
+    source = source.resolve()
+    target = target.resolve()
+    if backup is not None:
+        backup = backup.resolve()
+    commands: dict[str, Optional[list[str]]] = {
+        "version": [
+            python,
+            str(target / "scripts" / "experience_loop.py"),
+            "--version",
+        ],
+        "mode": [
+            python,
+            str(target / "scripts" / "experience_loop.py"),
+            "--json",
+            "mode",
+        ],
+        "status": [
+            python,
+            str(target / "scripts" / "experience_loop.py"),
+            "--json",
+            "status",
+        ],
+        "setup": [
+            python,
+            str(target / "scripts" / "experience_loop.py"),
+            "--json",
+            "setup",
+        ],
+        "doctor": [
+            python,
+            str(target / "scripts" / "experience_loop.py"),
+            "--json",
+            "doctor",
+        ],
+        "uninstall": [
+            python,
+            str(target / "scripts" / "uninstall.py"),
+            "--target",
+            str(target),
+            "--yes",
+        ],
+        "upgrade_from_current_checkout": (
+            None
+            if _same_path(source, target)
+            else [
+                python,
+                str(source / "scripts" / "install.py"),
+                "--target",
+                str(target),
+            ]
+        ),
+        "rollback": None,
+    }
+    if backup is not None and rollback_source_error(backup) is None:
+        commands["rollback"] = [
+            python,
+            str(backup / "scripts" / "install.py"),
+            "--target",
+            str(target),
+        ]
+    return commands
 
 
 def lifecycle_commands(
     source: Path, target: Path, backup: Optional[Path]
 ) -> dict[str, Optional[str]]:
-    python = Path(sys.executable).resolve()
-    # These paths exist when commands are rendered, so expand Windows 8.3 aliases.
-    source = source.resolve()
-    target = target.resolve()
-    if backup is not None:
-        backup = backup.resolve()
-    commands: dict[str, Optional[str]] = {
-        "status": _quoted_command(
-            [python, target / "scripts" / "experience_loop.py", "status"]
-        ),
-        "uninstall": _quoted_command(
-            [
-                python,
-                target / "scripts" / "uninstall.py",
-                "--target",
-                target,
-                "--yes",
-            ]
-        ),
-        "upgrade_from_current_checkout": _quoted_command(
-            [python, source / "scripts" / "install.py", "--target", target]
-        ),
-        "rollback": None,
+    return {
+        name: _quoted_command(parts) if parts is not None else None
+        for name, parts in lifecycle_argv(source, target, backup).items()
     }
-    if backup is not None:
-        commands["rollback"] = _quoted_command(
-            [python, backup / "scripts" / "install.py", "--target", target]
-        )
-    return commands
 
 
 def install(source: Path, target: Path, force: bool) -> dict[str, object]:
@@ -356,10 +652,23 @@ def install(source: Path, target: Path, force: bool) -> dict[str, object]:
             )
         return {
             "status": "already-active",
+            "version": read_version(source),
+            "source": str(source),
+            "source_provenance": source_provenance(source),
             "target": str(target),
             "backup": None,
             "migrated_legacy_backups": [],
             "commands": lifecycle_commands(source, target, None),
+            "command_argv": lifecycle_argv(source, target, None),
+            "command_shell": "powershell" if os.name == "nt" else "posix",
+            "runtime": str((target / "scripts" / "experience_loop.py").resolve()),
+            "onboarding_reference": str(
+                (target / "references" / "onboarding.md").resolve()
+            ),
+            "onboarding_prompt": onboarding_prompt(target),
+            "onboarding_state": "check_runtime_before_onboarding",
+            "rollback_available": False,
+            "rollback_note": None,
         }
 
     target.parent.mkdir(parents=True, exist_ok=True)
@@ -405,10 +714,24 @@ def install(source: Path, target: Path, force: bool) -> dict[str, object]:
 
     return {
         "status": "installed",
+        "version": read_version(source),
+        "source": str(source),
+        "source_provenance": source_provenance(source),
         "target": str(target),
         "backup": str(backup) if backup else None,
         "migrated_legacy_backups": [str(path) for path in migrated],
         "commands": lifecycle_commands(source, target, backup),
+        "command_argv": lifecycle_argv(source, target, backup),
+        "command_shell": "powershell" if os.name == "nt" else "posix",
+        "runtime": str((target / "scripts" / "experience_loop.py").resolve()),
+        "onboarding_reference": str(
+            (target / "references" / "onboarding.md").resolve()
+        ),
+        "onboarding_prompt": onboarding_prompt(target),
+        "onboarding_state": "check_runtime_before_onboarding",
+        "rollback_available": rollback_source_error(backup) is None
+        and backup is not None,
+        "rollback_note": rollback_note(backup),
     }
 
 
@@ -433,7 +756,9 @@ def main() -> int:
             checked_target = validate_target_path(target)
             result: dict[str, object] = {
                 "status": "dry-run",
+                "version": read_version(source),
                 "source": str(source),
+                "source_provenance": source_provenance(source),
                 "target": str(checked_target),
                 "backup_root": str(backup_root_for_target(checked_target)),
             }
@@ -456,15 +781,31 @@ def main() -> int:
         commands = result.get("commands")
         if isinstance(commands, dict):
             print("已安装命令 / Installed commands:")
+            print(f"  version: {commands['version']}")
+            print(f"  mode: {commands['mode']}")
             print(f"  status: {commands['status']}")
+            print(f"  setup: {commands['setup']}")
+            print(f"  doctor: {commands['doctor']}")
             print(f"  uninstall: {commands['uninstall']}")
-            print(
-                "  upgrade (keep or re-download this checkout): "
-                f"{commands['upgrade_from_current_checkout']}"
-            )
+            if commands.get("upgrade_from_current_checkout"):
+                print(
+                    "  upgrade (this checkout must still exist; otherwise re-download it): "
+                    f"{commands['upgrade_from_current_checkout']}"
+                )
+            else:
+                print("  upgrade: re-download the repository and run its installer")
             if commands.get("rollback"):
                 print(f"  rollback: {commands['rollback']}")
-        print("下一步 / Next: restart Codex if needed, then run `$experience-loop setup`.")
+            elif result.get("rollback_note"):
+                print(f"  rollback unavailable: {result['rollback_note']}")
+        if result["status"] == "dry-run":
+            print(
+                "下一步 / Next: review the target above, then run the installer "
+                "again without --dry-run."
+            )
+        else:
+            print("下一步 / Next: restart Codex or open a new session if needed, then say:")
+            print(f"  {result['onboarding_prompt']}")
     return 0
 
 

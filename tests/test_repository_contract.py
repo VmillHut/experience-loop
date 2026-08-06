@@ -35,14 +35,20 @@ class RepositoryContractTests(unittest.TestCase):
             for mode in ("auto", "focus", "deep", "off")
         }
         self.assertIn("silence, embedded guidance", mode_rows["auto"])
-        self.assertIn("Intensity rises", mode_rows["auto"])
-        self.assertIn("never silently becomes `deep`", mode_rows["auto"])
+        self.assertIn("required judgment checkpoint", mode_rows["auto"])
+        self.assertIn("short guided practice loop", mode_rows["auto"])
+        self.assertIn("No fixed answer quota", mode_rows["auto"])
+        self.assertIn("never creates a standing `focus` or `deep`", mode_rows["auto"])
         self.assertIn("no content-bearing profile use", mode_rows["off"])
         self.assertIn("learning references, checkpoints", mode_rows["off"])
         self.assertIn("learning summaries, or ledger writes", mode_rows["off"])
         self.assertIn("minimal mode/privacy control read", mode_rows["off"])
         self.assertIn("honor a previously saved `off`", mode_rows["off"])
         self.assertIn("`auto` is not a synonym for low intervention", skill)
+        self.assertIn("Choose the highest expected net user value", skill)
+        self.assertNotIn("requires 0 mandatory learning answers", skill.lower())
+        self.assertNotIn("at most two skippable checkpoints", skill.lower())
+        self.assertNotIn("at most 2 skippable checkpoints", skill.lower())
         self.assertIn(
             "Let one selected capability limit only learning intervention and ledger labeling.",
             skill,
@@ -62,6 +68,75 @@ class RepositoryContractTests(unittest.TestCase):
         self.assertIn("Ordinary `auto` work should not need it.", skill)
         self.assertIn("references/capability-compass.md", skill)
         self.assertTrue((ROOT / "references" / "capability-compass.md").is_file())
+
+    def test_readmes_define_ai_first_installation_and_all_four_modes(self) -> None:
+        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        readme_en = (ROOT / "README.en.md").read_text(encoding="utf-8")
+
+        self.assertIn("## 安装方式", readme)
+        self.assertIn("docs/AI_INSTALL.md", readme)
+        install_prompt = (
+            "请按照 https://github.com/VmillHut/experience-loop 仓库中的 "
+            "`docs/AI_INSTALL.md`，安装并初始化 `experience-loop` Skill。"
+        )
+        self.assertEqual(readme.count(install_prompt), 1)
+        self.assertIn("references/onboarding.md", readme)
+        self.assertIn("`auto` 不是弱模式", readme)
+        self.assertIn("必答判断检查点", readme)
+        self.assertIn("短训练循环", readme)
+        self.assertIn("没有“0 个必答学习问题”的预设", readme)
+        self.assertIn("没有“最多 N 个可跳过检查点”的固定上限", readme)
+        for mode in ("auto", "focus", "deep", "off"):
+            self.assertIn(f"| `{mode}` |", readme)
+            self.assertIn(f"| `{mode}` |", readme_en)
+
+        self.assertIn("## Installation", readme_en)
+        self.assertIn("docs/AI_INSTALL.en.md", readme_en)
+        self.assertIn("`auto` is not the weak mode", readme_en)
+        self.assertIn("required judgment checkpoint", readme_en.lower())
+        self.assertIn("short guided practice loop", readme_en.lower())
+        self.assertIn("highest expected net user value", readme_en)
+        self.assertNotIn("requires zero mandatory learning answers", readme_en.lower())
+        self.assertNotIn("at most two skippable checkpoints", readme_en.lower())
+
+    def test_ai_install_and_onboarding_protocols_keep_installation_low_cost(self) -> None:
+        install_zh_path = ROOT / "docs" / "AI_INSTALL.md"
+        install_en_path = ROOT / "docs" / "AI_INSTALL.en.md"
+        onboarding_path = ROOT / "references" / "onboarding.md"
+        self.assertTrue(install_zh_path.is_file())
+        self.assertTrue(install_en_path.is_file())
+        self.assertTrue(onboarding_path.is_file())
+
+        install_zh = install_zh_path.read_text(encoding="utf-8")
+        install_en = install_en_path.read_text(encoding="utf-8")
+        onboarding = onboarding_path.read_text(encoding="utf-8")
+
+        for protocol in (install_zh, install_en):
+            self.assertIn("--dry-run", protocol)
+            self.assertIn("--force", protocol)
+            self.assertIn("AGENTS.md", protocol)
+            self.assertIn("doctor", protocol)
+            self.assertIn("status", protocol)
+            self.assertIn("onboarding", protocol.lower())
+
+        self.assertIn("不扫描项目、不读取资料", install_zh)
+        self.assertIn("全部可选", install_zh)
+        self.assertIn("不要用静默降级伪造成功", install_zh)
+        self.assertIn("rollback_available", install_zh)
+        self.assertIn("rollback_note", install_zh)
+        self.assertIn("Every profile question is optional", install_en)
+        self.assertIn("does not authorize", install_en.lower())
+        self.assertIn("rollback_note", install_en)
+
+        self.assertIn("全部跳过", onboarding)
+        self.assertIn("guidance_preference", onboarding)
+        self.assertIn("Do not scan a project", onboarding)
+        self.assertIn("Do not scan a project, ingest a document", onboarding)
+        self.assertIn("约 2 分钟的对话式使用教学", onboarding)
+        self.assertIn("required judgment", onboarding)
+        self.assertIn("short guided", onboarding)
+        for mode in ("auto", "focus", "deep", "off"):
+            self.assertIn(f"| `{mode}` |", onboarding)
 
     def test_openai_metadata_is_utf8_and_invokes_the_skill(self) -> None:
         metadata = (ROOT / "agents" / "openai.yaml").read_text(encoding="utf-8")

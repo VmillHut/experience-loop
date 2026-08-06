@@ -6,17 +6,24 @@ All notable user-facing changes to this project are documented here. The format 
 
 ### Added
 
-- Adaptive `auto` control that weighs consequence, uncertainty, transfer value, profile relevance, time pressure, and interaction cost, then chooses silence, embedded guidance, one checkpoint, or at most two short checkpoints without implicitly becoming `deep`.
+- Adaptive `auto` control that weighs consequence, uncertainty, transfer value, profile relevance, time pressure, and interaction cost, then chooses silence, embedded guidance, an optional checkpoint, a required judgment checkpoint, or a short guided practice loop without creating an implicit standing `focus` or `deep` contract.
 - A six-direction capability compass and evidence summaries for problem framing, system modeling, verification, reliability, Agent leverage, and ownership.
 - Cognitive-coverage, delegation-calibration, and real-user or production feedback guidance for consequential work.
 - Progressive personalization that keeps profiles, on-demand article and document use, one-off structured-data analysis, and read-only exemplar-project comparison available through one-sentence or one-path inputs.
+- An AI-first installation contract with dry-run, validation, consent, rollback, and post-install handoff boundaries.
+- A fixed conversational onboarding flow with optional concrete profile questions and an opt-in interactive tutorial.
+- A dedicated guidance-preference profile field so interruption and participation preferences remain separate from explanation style.
 
 ### Changed
 
 - Unified user-facing modes as `auto`, `focus`, `deep`, and `off`: `focus` explicitly locks one capability goal, `deep` is explicit full-intensity learning with task quality first, and `off` never adds a learning tail. Legacy `ship`/`incident` inputs normalize to `auto`, while `coach` normalizes to `focus`.
 - Added a fast path for mechanical, explicit delivery-only, and urgent recovery work, and clarified that one learning seam never limits engineering review or verification coverage.
 - Tightened optional implicit routing so only `auto` may be inferred; `focus` and `deep` require an explicit current-task request or an explicitly saved default.
-- Made first-run setup zero-configuration by default and removed routine mode-selection prompts.
+- Replaced dry manual first-run steps with one compact optional profile conversation followed by a single tutorial offer; default `auto` still requires no mode choice.
+- Expanded installer receipts with installed runtime/onboarding paths and machine-ready version, mode, status, setup, doctor, uninstall, upgrade, and rollback commands.
+- Added platform-copyable shell commands, structured command argv, and repository/commit/dirty provenance so installation Agents do not need to reconstruct or misparse validation steps.
+- Made empty onboarding expose no invented role while retaining a backward-compatible nonempty on-disk sentinel, and made repeated setup preserve existing state without offering the beginner tutorial again.
+- Guarded rollback receipts so incomplete or unrecognized backups are preserved and reported without emitting an invalid executable rollback command.
 
 ## [0.1.0] - 2026-08-05
 

@@ -39,6 +39,15 @@ class RuntimeCliTests(unittest.TestCase):
             self.assertNotIn("coach", mode_help.stdout)
             self.assertNotIn("incident", mode_help.stdout)
 
+            setup_help = run_cli(home, "setup", "--help")
+            self.assertEqual(setup_help.returncode, 0, setup_help.stderr)
+            self.assertIn("--guidance-preference", setup_help.stdout)
+
+            profile_help = run_cli(home, "profile", "update", "--help")
+            self.assertEqual(profile_help.returncode, 0, profile_help.stderr)
+            self.assertIn("--guidance-preference", profile_help.stdout)
+            self.assertIn("--clear-guidance-preference", profile_help.stdout)
+
     def test_setup_is_idempotent_and_preserves_custom_profile(self) -> None:
         with tempfile.TemporaryDirectory(prefix="experience-loop-runtime-") as raw:
             root = Path(raw)
@@ -67,6 +76,8 @@ class RuntimeCliTests(unittest.TestCase):
                 "测试设计；故障诊断",
                 "--explanation-style",
                 "先结论，再解释机制",
+                "--guidance-preference",
+                "高价值判断时可以短暂等待；赶工时少打断",
                 "--delivery-context",
                 "双周发布且兼容旧客户端",
                 "--mode",
@@ -85,6 +96,10 @@ class RuntimeCliTests(unittest.TestCase):
             self.assertEqual(profile["goals"], ["架构决策", "代码审查"])
             self.assertEqual(profile["learning_focus"], ["测试设计", "故障诊断"])
             self.assertEqual(profile["explanation_style"], "先结论，再解释机制")
+            self.assertEqual(
+                profile["guidance_preference"],
+                "高价值判断时可以短暂等待；赶工时少打断",
+            )
             self.assertEqual(profile["delivery_context"], "双周发布且兼容旧客户端")
             self.assertEqual(profile["mode"], "focus")
             self.assertEqual(profile["privacy"], "restricted")
@@ -92,9 +107,22 @@ class RuntimeCliTests(unittest.TestCase):
             self.assertTrue((home / "state.json").is_file())
             self.assertTrue((home / "profile.json").is_file())
             self.assertTrue((home / "ledger" / "events.jsonl").is_file())
+            stored_profile = json.loads(
+                (home / "profile.json").read_text(encoding="utf-8")
+            )
+            self.assertEqual(stored_profile["role"], "backend-engineer")
+            self.assertTrue(stored_profile["role_provided"])
+            self.assertEqual(first_data["next_actions"], ["offer_short_tutorial"])
+            self.assertNotIn("project", first_data)
+            next_actions = " ".join(first_data["next_actions"]).lower()
+            self.assertNotIn("scan", next_actions)
+            self.assertNotIn("import", next_actions)
+            self.assertNotIn("ingest", next_actions)
 
             second_data = assert_ok(self, run_cli(home, "setup"))
             self.assertTrue(second_data["already_initialized"])
+            self.assertEqual(second_data["next_actions"], [])
+            self.assertIn("不重复新手教学", second_data["message"])
             second_profile = second_data["profile"]
             for field in (
                 "name",
@@ -105,6 +133,7 @@ class RuntimeCliTests(unittest.TestCase):
                 "goals",
                 "learning_focus",
                 "explanation_style",
+                "guidance_preference",
                 "delivery_context",
                 "mode",
                 "privacy",
@@ -118,6 +147,17 @@ class RuntimeCliTests(unittest.TestCase):
             home = Path(raw) / "data"
             setup = assert_ok(self, run_cli(home, "setup"))
             self.assertEqual(setup["profile"]["mode"], "auto")
+            self.assertIsNone(setup["profile"]["role"])
+            self.assertFalse(setup["profile"]["customized"])
+            stored_profile = json.loads(
+                (home / "profile.json").read_text(encoding="utf-8")
+            )
+            self.assertEqual(stored_profile["role"], "software-developer")
+            self.assertFalse(stored_profile["role_provided"])
+
+            shown = assert_ok(self, run_cli(home, "profile", "show"))["profile"]
+            self.assertIsNone(shown["role"])
+            self.assertNotIn("role_provided", shown)
 
             for mode in ("auto", "focus", "deep", "off"):
                 switched = assert_ok(self, run_cli(home, "mode", mode))
@@ -197,6 +237,39 @@ class RuntimeCliTests(unittest.TestCase):
             self.assertTrue(persisted["profile_customized"])
             self.assertEqual(persisted["privacy"], "restricted")
             self.assertTrue(persisted["records_learning_events"])
+
+    def test_stale_role_marker_is_reconciled_from_the_role_sentinel(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="experience-loop-role-roundtrip-") as raw:
+            home = Path(raw) / "data"
+            assert_ok(self, run_cli(home, "setup"))
+            profile_path = home / "profile.json"
+            stored = json.loads(profile_path.read_text(encoding="utf-8"))
+
+            # An older runtime can change role without understanding role_provided.
+            stored["role"] = "backend-engineer"
+            stored["role_provided"] = False
+            stored["customized"] = False
+            profile_path.write_text(
+                json.dumps(stored, ensure_ascii=False), encoding="utf-8"
+            )
+            controls = assert_ok(self, run_cli(home, "mode"))
+            self.assertTrue(controls["profile_customized"])
+            shown = assert_ok(self, run_cli(home, "profile", "show"))["profile"]
+            self.assertEqual(shown["role"], "backend-engineer")
+            self.assertTrue(shown["customized"])
+
+            # Sentinel priority also reconciles an older reset that leaves true.
+            stored["role"] = "software-developer"
+            stored["role_provided"] = True
+            stored["customized"] = True
+            profile_path.write_text(
+                json.dumps(stored, ensure_ascii=False), encoding="utf-8"
+            )
+            controls = assert_ok(self, run_cli(home, "mode"))
+            self.assertFalse(controls["profile_customized"])
+            shown = assert_ok(self, run_cli(home, "profile", "show"))["profile"]
+            self.assertIsNone(shown["role"])
+            self.assertFalse(shown["customized"])
 
     def test_mode_off_ignores_unrelated_profile_content_corruption(self) -> None:
         with tempfile.TemporaryDirectory(prefix="experience-loop-mode-corrupt-") as raw:
@@ -374,6 +447,8 @@ class RuntimeCliTests(unittest.TestCase):
                     "旧方向",
                     "--explanation-style",
                     "旧解释偏好",
+                    "--guidance-preference",
+                    "旧指导偏好",
                     "--delivery-context",
                     "旧交付场景",
                 ),
@@ -402,6 +477,8 @@ class RuntimeCliTests(unittest.TestCase):
                     "2 years",
                     "--explanation-style",
                     "先给结论，再解释失效条件",
+                    "--guidance-preference",
+                    "关键判断可以先等我回答",
                     "--delivery-context",
                     "每周发布，必须兼容旧客户端",
                 ),
@@ -415,6 +492,9 @@ class RuntimeCliTests(unittest.TestCase):
             self.assertEqual(profile["experience_level"], "2 years")
             self.assertEqual(
                 profile["explanation_style"], "先给结论，再解释失效条件"
+            )
+            self.assertEqual(
+                profile["guidance_preference"], "关键判断可以先等我回答"
             )
             self.assertEqual(
                 profile["delivery_context"], "每周发布，必须兼容旧客户端"
@@ -432,6 +512,7 @@ class RuntimeCliTests(unittest.TestCase):
                     "--clear-learning-focus",
                     "--clear-experience-level",
                     "--clear-explanation-style",
+                    "--clear-guidance-preference",
                     "--clear-delivery-context",
                 ),
             )
@@ -441,6 +522,7 @@ class RuntimeCliTests(unittest.TestCase):
             self.assertEqual(cleared["profile"]["learning_focus"], [])
             self.assertIsNone(cleared["profile"]["experience_level"])
             self.assertIsNone(cleared["profile"]["explanation_style"])
+            self.assertIsNone(cleared["profile"]["guidance_preference"])
             self.assertIsNone(cleared["profile"]["delivery_context"])
             shown = assert_ok(self, run_cli(home, "profile", "show"))
             self.assertEqual(shown["profile"], cleared["profile"])
@@ -469,6 +551,11 @@ class RuntimeCliTests(unittest.TestCase):
                 ("--clear-domains", "--domain", "新领域"),
                 ("--clear-goals", "--goal", "新目标"),
                 ("--clear-learning-focus", "--learning-focus", "新方向"),
+                (
+                    "--clear-guidance-preference",
+                    "--guidance-preference",
+                    "关键节点先让我判断",
+                ),
             )
             for clear_flag, value_flag, value in conflicts:
                 failed = run_cli(
@@ -498,6 +585,7 @@ class RuntimeCliTests(unittest.TestCase):
                 "responsibilities",
                 "domains",
                 "explanation_style",
+                "guidance_preference",
                 "delivery_context",
             )
             for field in added_fields:
@@ -510,6 +598,7 @@ class RuntimeCliTests(unittest.TestCase):
             self.assertEqual(shown["responsibilities"], [])
             self.assertEqual(shown["domains"], [])
             self.assertIsNone(shown["explanation_style"])
+            self.assertIsNone(shown["guidance_preference"])
             self.assertIsNone(shown["delivery_context"])
 
             setup = assert_ok(self, run_cli(home, "setup"))
@@ -535,6 +624,15 @@ class RuntimeCliTests(unittest.TestCase):
             controls = assert_ok(self, run_cli(home, "mode"))
             self.assertTrue(controls["profile_customized"])
 
+            persisted["guidance_preference"] = ["unexpected"]
+            profile_path.write_text(
+                json.dumps(persisted, ensure_ascii=False), encoding="utf-8"
+            )
+            invalid_guidance = run_cli(home, "profile", "show")
+            self.assertEqual(invalid_guidance.returncode, 6)
+            self.assertEqual(payload(invalid_guidance)["error"]["code"], 6)
+
+            persisted["guidance_preference"] = None
             persisted["responsibilities"] = ["支付链路", 7]
             profile_path.write_text(
                 json.dumps(persisted, ensure_ascii=False), encoding="utf-8"

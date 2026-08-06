@@ -34,6 +34,7 @@ from .profile import (
     default_profile,
     load_profile,
     load_profile_controls,
+    profile_for_display,
     set_mode,
     validate_profile,
 )
@@ -110,6 +111,10 @@ def _parser() -> argparse.ArgumentParser:
     setup.add_argument("--goal", action="append", default=[])
     setup.add_argument("--learning-focus", action="append", default=[])
     setup.add_argument("--explanation-style")
+    setup.add_argument(
+        "--guidance-preference",
+        help="指导互动偏好，例如少打断、愿意先判断或高价值时可短暂等待",
+    )
     setup.add_argument("--delivery-context")
     setup.add_argument(
         "--mode", type=_mode_value, metavar="{auto,focus,deep,off}", default=None
@@ -147,6 +152,8 @@ def _parser() -> argparse.ArgumentParser:
     profile_update.add_argument("--clear-learning-focus", action="store_true")
     profile_update.add_argument("--explanation-style")
     profile_update.add_argument("--clear-explanation-style", action="store_true")
+    profile_update.add_argument("--guidance-preference")
+    profile_update.add_argument("--clear-guidance-preference", action="store_true")
     profile_update.add_argument("--delivery-context")
     profile_update.add_argument("--clear-delivery-context", action="store_true")
     profile_update.add_argument(
@@ -656,6 +663,7 @@ def _dispatch(namespace: argparse.Namespace, store: Store) -> Dict[str, Any]:
             goals=namespace.goal,
             learning_focus=namespace.learning_focus,
             explanation_style=namespace.explanation_style,
+            guidance_preference=namespace.guidance_preference,
             delivery_context=namespace.delivery_context,
             mode=namespace.mode,
             privacy=namespace.privacy,
@@ -665,8 +673,14 @@ def _dispatch(namespace: argparse.Namespace, store: Store) -> Dict[str, Any]:
             "already_initialized": already_initialized,
             "home": str(store.home),
             "profile": profile,
-            "next_actions": ["project scan <项目目录>", "knowledge add <资料路径>"],
-            "message": "Experience Loop 已可用；无需手工编辑配置。",
+            "next_actions": (
+                [] if already_initialized else ["offer_short_tutorial"]
+            ),
+            "message": (
+                "Experience Loop 已更新；保留现有初始化状态，不重复新手教学。"
+                if already_initialized
+                else "Experience Loop 已可用；画像字段均可选，下一步只需询问是否需要简短教学。"
+            ),
         }
         if namespace.project:
             result["project"] = scan_project(
@@ -680,7 +694,7 @@ def _dispatch(namespace: argparse.Namespace, store: Store) -> Dict[str, Any]:
     if command == "profile":
         store.require_initialized()
         if namespace.profile_command == "show":
-            return {"profile": load_profile(store)}
+            return {"profile": profile_for_display(load_profile(store))}
         profile = configure_profile(
             store,
             name=namespace.name,
@@ -703,6 +717,8 @@ def _dispatch(namespace: argparse.Namespace, store: Store) -> Dict[str, Any]:
             clear_learning_focus=namespace.clear_learning_focus,
             explanation_style=namespace.explanation_style,
             clear_explanation_style=namespace.clear_explanation_style,
+            guidance_preference=namespace.guidance_preference,
+            clear_guidance_preference=namespace.clear_guidance_preference,
             delivery_context=namespace.delivery_context,
             clear_delivery_context=namespace.clear_delivery_context,
             mode=namespace.mode,
