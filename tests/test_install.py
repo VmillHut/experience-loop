@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import importlib.util
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -16,10 +17,13 @@ from unittest import mock
 ROOT = Path(__file__).resolve().parents[1]
 
 
-def run_script(script: str, *args: str) -> subprocess.CompletedProcess[str]:
+def run_script(
+    script: str, *args: str, env: Optional[dict[str, str]] = None
+) -> subprocess.CompletedProcess[str]:
     return subprocess.run(
         [sys.executable, "-B", str(ROOT / "scripts" / script), *args],
         cwd=ROOT,
+        env=env,
         text=True,
         encoding="utf-8",
         capture_output=True,
@@ -87,7 +91,22 @@ class InstallTests(unittest.TestCase):
             unrelated_sentinel = unrelated / "keep.txt"
             unrelated_sentinel.write_text("do not move", encoding="utf-8")
 
-            first = run_script("install.py", "--target", str(target), "--json")
+            first = run_script(
+                "install.py",
+                "--host",
+                "codex",
+                "--scope",
+                "user",
+                "--invocation",
+                "$experience-loop",
+                "--reload-hint",
+                "Use the current host's verified refresh flow.",
+                "--host-evidence",
+                "Resolved by the installation AI from the live host session.",
+                "--target",
+                str(target),
+                "--json",
+            )
             self.assertEqual(first.returncode, 0, first.stderr)
             payload = json.loads(first.stdout)
             self.assertEqual(payload["status"], "installed")
@@ -109,8 +128,28 @@ class InstallTests(unittest.TestCase):
             self.assertTrue(runtime.is_file())
             self.assertTrue(onboarding_reference.is_file())
             self.assertIn(str(onboarding_reference), payload["onboarding_prompt"])
-            self.assertIn("$experience-loop", payload["onboarding_prompt"])
+            self.assertIn("完整核心已安装", payload["onboarding_prompt"])
             self.assertIn("所有画像问题都可跳过", payload["onboarding_prompt"])
+            self.assertEqual(payload["host"], "codex")
+            self.assertEqual(payload["invocation"], "$experience-loop")
+            self.assertEqual(
+                payload["core_behavior_contract"], "unchanged-across-hosts"
+            )
+            self.assertEqual(
+                payload["support_level"],
+                "dynamic-host-contract-requires-session-validation",
+            )
+            self.assertEqual(
+                payload["host_contract_status"], "resolved-by-installing-agent"
+            )
+            self.assertEqual(
+                payload["discovery_roots_coverage"], "asserted-by-installing-agent"
+            )
+            self.assertEqual(payload["capabilities"]["guidance"], "installed-core")
+            self.assertEqual(
+                payload["capabilities"]["knowledge_lens"],
+                "requires-runtime-validation",
+            )
 
             first_commands = payload["commands"]
             first_argv = payload["command_argv"]
@@ -146,6 +185,45 @@ class InstallTests(unittest.TestCase):
             self.assertIn("dirty", provenance)
             self.assertEqual(
                 payload["onboarding_state"], "check_runtime_before_onboarding"
+            )
+
+            inherited = run_script(
+                "install.py",
+                "--target",
+                str(target),
+                "--dry-run",
+                "--json",
+            )
+            self.assertEqual(inherited.returncode, 0, inherited.stderr)
+            inherited_payload = json.loads(inherited.stdout)
+            self.assertEqual(inherited_payload["host"], "codex")
+            self.assertEqual(inherited_payload["scope"], "user")
+            self.assertEqual(inherited_payload["invocation"], "$experience-loop")
+            self.assertEqual(
+                inherited_payload["host_evidence"],
+                "Resolved by the installation AI from the live host session.",
+            )
+
+            partial = run_script(
+                "install.py",
+                "--target",
+                str(target),
+                "--reload-hint",
+                "Updated verified refresh flow.",
+                "--dry-run",
+                "--json",
+            )
+            self.assertEqual(partial.returncode, 0, partial.stderr)
+            partial_payload = json.loads(partial.stdout)
+            self.assertEqual(partial_payload["host"], "codex")
+            self.assertEqual(partial_payload["scope"], "user")
+            self.assertEqual(partial_payload["invocation"], "$experience-loop")
+            self.assertEqual(
+                partial_payload["reload_hint"], "Updated verified refresh flow."
+            )
+            self.assertEqual(
+                partial_payload["host_evidence"],
+                "Resolved by the installation AI from the live host session.",
             )
 
             argv_version = subprocess.run(
@@ -189,7 +267,22 @@ class InstallTests(unittest.TestCase):
             # which copy was restored.
             (target / "VERSION").write_text("old-local-version\n", encoding="utf-8")
 
-            second = run_script("install.py", "--target", str(target), "--json")
+            second = run_script(
+                "install.py",
+                "--host",
+                "codex",
+                "--scope",
+                "user",
+                "--invocation",
+                "$experience-loop",
+                "--reload-hint",
+                "Use the current host's verified refresh flow.",
+                "--host-evidence",
+                "Resolved by the installation AI from the live host session.",
+                "--target",
+                str(target),
+                "--json",
+            )
             self.assertEqual(second.returncode, 0, second.stderr)
             payload = json.loads(second.stdout)
             self.assertIsNotNone(payload["backup"])
@@ -214,6 +307,8 @@ class InstallTests(unittest.TestCase):
             self.assertIn(str(target.resolve()), commands["status"])
             self.assertIn(str(target.resolve()), commands["uninstall"])
             self.assertIn(str(ROOT.resolve()), commands["upgrade_from_current_checkout"])
+            self.assertIn("--host", payload["command_argv"]["upgrade_from_current_checkout"])
+            self.assertIn("codex", payload["command_argv"]["upgrade_from_current_checkout"])
             self.assertIn(str(backup.resolve()), commands["rollback"])
             self.assertTrue(payload["rollback_available"])
             self.assertIsNone(payload["rollback_note"])
@@ -299,6 +394,20 @@ class InstallTests(unittest.TestCase):
                 self.assertIn(str(target.resolve()), commands[name], name)
                 self.assertIn(str(target.resolve()), " ".join(command_argv[name]), name)
 
+            secondary_root = Path(raw) / "secondary-skills"
+            duplicate = secondary_root / "experience-loop"
+            shutil.copytree(target, duplicate)
+            blocked = run_python(
+                target / "scripts" / "install.py",
+                "--target",
+                str(target),
+                "--discovery-root",
+                str(secondary_root),
+                "--json",
+            )
+            self.assertEqual(blocked.returncode, 4)
+            self.assertIn("Another discoverable", json.loads(blocked.stdout)["error"])
+
     def test_previous_runtime_contract_upgrades_without_force_and_rolls_back(self) -> None:
         with tempfile.TemporaryDirectory(prefix="experience-loop-previous-upgrade-") as raw:
             root = Path(raw)
@@ -320,6 +429,18 @@ class InstallTests(unittest.TestCase):
             source = source.replace(
                 '        "runtime_contract": CURRENT_RUNTIME_CONTRACT,\n', "", 1
             )
+            source = source.replace('        "installer_version": 4,\n', '        "installer_version": 3,\n', 1)
+            current_contract_map = """RUNTIME_CONTRACT_FILES = {
+    1: RUNTIME_CONTRACT_1_FILES,
+    CURRENT_RUNTIME_CONTRACT: CURRENT_SOURCE_REQUIRED_FILES,
+}
+"""
+            self.assertIn(current_contract_map, source)
+            source = source.replace(
+                current_contract_map,
+                "RUNTIME_CONTRACT_FILES = {1: RUNTIME_CONTRACT_1_FILES}\n",
+                1,
+            )
             previous_installer.write_text(source, encoding="utf-8")
 
             previous = run_python(
@@ -338,12 +459,17 @@ class InstallTests(unittest.TestCase):
             self.assertTrue(data["rollback_available"])
             backup = Path(data["backup"])
             self.assertFalse((backup / "references" / "onboarding.md").exists())
+            rollback_argv = data["command_argv"]["rollback"]
+            self.assertIsNotNone(rollback_argv)
+            self.assertIn("--force", rollback_argv)
 
-            rollback = run_python(
-                backup / "scripts" / "install.py",
-                "--target",
-                str(target),
-                "--json",
+            rollback = subprocess.run(
+                rollback_argv,
+                cwd=ROOT,
+                text=True,
+                encoding="utf-8",
+                capture_output=True,
+                check=False,
             )
             self.assertEqual(rollback.returncode, 0, rollback.stderr)
             self.assertFalse((target / "references" / "onboarding.md").exists())
@@ -493,12 +619,58 @@ class InstallTests(unittest.TestCase):
             target.mkdir()
             (target / "private.txt").write_text("mine", encoding="utf-8")
 
+            preview = run_script(
+                "install.py", "--target", str(target), "--dry-run", "--json"
+            )
+            self.assertEqual(preview.returncode, 4)
+            preview_data = json.loads(preview.stdout)
+            self.assertEqual(preview_data["status"], "blocked")
+            self.assertTrue(preview_data["install_plan"]["requires_force"])
+            self.assertTrue(preview_data["install_plan"]["blockers"])
+
+            forced_preview = run_script(
+                "install.py",
+                "--target",
+                str(target),
+                "--force",
+                "--dry-run",
+                "--json",
+            )
+            self.assertEqual(forced_preview.returncode, 0, forced_preview.stderr)
+            self.assertEqual(json.loads(forced_preview.stdout)["status"], "dry-run")
+
             result = run_script("install.py", "--target", str(target), "--json")
             self.assertEqual(result.returncode, 4)
             self.assertEqual(json.loads(result.stdout)["status"], "error")
             self.assertEqual((target / "private.txt").read_text(encoding="utf-8"), "mine")
 
     def test_uninstaller_rejects_forged_marker_and_dangerous_target(self) -> None:
+        installer = load_installer_module()
+        anchor = Path(Path.cwd().anchor)
+        with self.assertRaisesRegex(RuntimeError, "too close"):
+            installer.validate_target_path(anchor / "temporary" / "experience-loop")
+        with self.assertRaisesRegex(RuntimeError, "too close"):
+            installer.validate_target_path(Path.home() / "experience-loop")
+        with tempfile.TemporaryDirectory(prefix="experience-loop-backup-root-") as raw:
+            target = Path(raw) / "skills" / "experience-loop"
+            unsafe = Path(raw) / "skill-backups"
+            with mock.patch.object(
+                installer, "first_reparse_component", return_value=unsafe
+            ):
+                with self.assertRaisesRegex(RuntimeError, "backup root"):
+                    installer.backup_root_for_target(target)
+        with tempfile.TemporaryDirectory(prefix="experience-loop-reparse-scan-") as raw:
+            root = Path(raw) / "skills"
+            candidate = root / "experience-loop"
+            candidate.mkdir(parents=True)
+            with mock.patch.object(
+                installer,
+                "_is_reparse_point",
+                side_effect=lambda path: installer._same_path(path, candidate),
+            ):
+                with self.assertRaisesRegex(RuntimeError, "possible duplicate"):
+                    installer.discoverable_installations(candidate, [root])
+
         with tempfile.TemporaryDirectory(prefix="experience-loop-install-") as raw:
             root = Path(raw)
             target = root / "skills" / "experience-loop"
@@ -574,6 +746,288 @@ class InstallTests(unittest.TestCase):
             self.assertEqual(removed.returncode, 0, removed.stderr)
             self.assertFalse(target.exists())
             self.assertEqual(discoverable_experience_loops(target.parent), [])
+
+    def test_dynamic_host_contracts_install_identical_core_with_distinct_handoffs(self) -> None:
+        digests: dict[str, str] = {}
+        expected = {
+            "Desktop Agent": "invoke experience-loop from the palette",
+            "Terminal Agent": "/experience-loop",
+            "Future Agent": "ask the host to use experience-loop",
+        }
+        with tempfile.TemporaryDirectory(prefix="experience-loop-hosts-") as raw:
+            root = Path(raw)
+            for index, (host, invocation) in enumerate(expected.items()):
+                target = root / f"host-{index}" / "skills" / "experience-loop"
+
+                preview = run_script(
+                    "install.py",
+                    "--host",
+                    host,
+                    "--scope",
+                    "user",
+                    "--target",
+                    str(target),
+                    "--invocation",
+                    invocation,
+                    "--reload-hint",
+                    f"Use {host}'s current verified refresh flow.",
+                    "--host-evidence",
+                    f"Resolved from the live {host} session and current help.",
+                    "--dry-run",
+                    "--json",
+                )
+                self.assertEqual(preview.returncode, 0, preview.stderr)
+                preview_data = json.loads(preview.stdout)
+                target = target.resolve()
+                self.assertEqual(Path(preview_data["target"]), target.resolve())
+                self.assertEqual(preview_data["invocation"], invocation)
+                self.assertEqual(
+                    preview_data["host_contract_status"],
+                    "resolved-by-installing-agent",
+                )
+                self.assertEqual(
+                    preview_data["discovery_status"],
+                    "requires-host-session-validation",
+                )
+
+                installed = run_script(
+                    "install.py",
+                    "--host",
+                    host,
+                    "--scope",
+                    "user",
+                    "--target",
+                    str(target),
+                    "--invocation",
+                    invocation,
+                    "--reload-hint",
+                    f"Use {host}'s current verified refresh flow.",
+                    "--host-evidence",
+                    f"Resolved from the live {host} session and current help.",
+                    "--json",
+                )
+                self.assertEqual(installed.returncode, 0, installed.stderr)
+                data = json.loads(installed.stdout)
+                self.assertEqual(data["host"], host)
+                self.assertEqual(data["invocation"], invocation)
+                self.assertNotIn(invocation, data["onboarding_prompt"])
+                self.assertIn("完整核心已安装", data["onboarding_prompt"])
+                digests[host] = hashlib.sha256(
+                    (target / "SKILL.md").read_bytes()
+                ).hexdigest()
+
+            self.assertEqual(len(set(digests.values())), 1, digests)
+
+    def test_dynamic_contract_requires_target_and_never_claims_host_discovery(self) -> None:
+        missing_target = run_script("install.py", "--dry-run", "--json")
+        self.assertEqual(missing_target.returncode, 2)
+        self.assertIn("--target", missing_target.stderr)
+
+        with tempfile.TemporaryDirectory(prefix="experience-loop-contract-") as raw:
+            target = Path(raw) / "skills" / "experience-loop"
+            unresolved = run_script(
+                "install.py",
+                "--target",
+                str(target),
+                "--dry-run",
+                "--json",
+            )
+            self.assertEqual(unresolved.returncode, 0, unresolved.stderr)
+            data = json.loads(unresolved.stdout)
+            self.assertEqual(data["host"], "current-agent")
+            self.assertIsNone(data["invocation"])
+            self.assertEqual(data["host_contract_status"], "missing-host-evidence")
+            self.assertEqual(
+                data["discovery_status"], "requires-host-session-validation"
+            )
+
+            bad_contract = run_script(
+                "install.py",
+                "--target",
+                str(target),
+                "--host",
+                "bad\nhost",
+                "--dry-run",
+                "--json",
+            )
+            self.assertEqual(bad_contract.returncode, 4)
+            self.assertIn("single printable line", json.loads(bad_contract.stdout)["error"])
+
+    def test_ai_declared_discovery_roots_block_duplicates_and_report_sharing(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="experience-loop-shared-host-") as raw:
+            root = Path(raw)
+            secondary_root = root / "secondary-skills"
+            secondary_target = secondary_root / "experience-loop"
+            first = run_script(
+                "install.py",
+                "--host",
+                "CLI Agent",
+                "--target",
+                str(secondary_target),
+                "--host-evidence",
+                "Resolved by the live CLI Agent.",
+                "--json",
+            )
+            self.assertEqual(first.returncode, 0, first.stderr)
+
+            primary_target = root / "primary-skills" / "experience-loop"
+            second = run_script(
+                "install.py",
+                "--host",
+                "Desktop Agent",
+                "--target",
+                str(primary_target),
+                "--discovery-root",
+                str(secondary_root),
+                "--host-evidence",
+                "Resolved by the live Desktop Agent.",
+                "--json",
+            )
+            self.assertEqual(second.returncode, 4)
+            self.assertIn("Another discoverable", json.loads(second.stdout)["error"])
+
+            preview = run_script(
+                "install.py",
+                "--host",
+                "Desktop Agent",
+                "--target",
+                str(primary_target),
+                "--discovery-root",
+                str(secondary_root),
+                "--affected-host",
+                "Desktop Agent",
+                "--affected-host",
+                "CLI Agent",
+                "--host-evidence",
+                "The installation AI verified a shared discovery directory.",
+                "--dry-run",
+                "--json",
+            )
+            self.assertEqual(preview.returncode, 4, preview.stderr)
+            preview_data = json.loads(preview.stdout)
+            self.assertEqual(preview_data["status"], "blocked")
+            self.assertEqual(
+                preview_data["affected_hosts"], ["Desktop Agent", "CLI Agent"]
+            )
+            self.assertEqual(
+                preview_data["install_plan"]["duplicates"],
+                [str(secondary_target.resolve())],
+            )
+
+    def test_uninstaller_reuses_persisted_dynamic_discovery_roots(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="experience-loop-uninstall-contract-") as raw:
+            root = Path(raw)
+            primary_root = root / "primary-skills"
+            secondary_root = root / "secondary-skills"
+            target = primary_root / "experience-loop"
+            duplicate = secondary_root / "experience-loop"
+            installed = run_script(
+                "install.py",
+                "--host",
+                "Current Agent",
+                "--target",
+                str(target),
+                "--discovery-root",
+                str(secondary_root),
+                "--affected-host",
+                "Current Agent",
+                "--affected-host",
+                "Second Surface",
+                "--host-evidence",
+                "The installation AI verified both live discovery roots.",
+                "--json",
+            )
+            self.assertEqual(installed.returncode, 0, installed.stderr)
+            marker = json.loads(
+                (target / ".experience-loop-install.json").read_text(encoding="utf-8")
+            )
+            self.assertEqual(marker["host_contract"]["host"], "Current Agent")
+            self.assertIn(
+                str(secondary_root.resolve()),
+                marker["host_contract"]["discovery_roots"],
+            )
+
+            merged = run_script(
+                "install.py",
+                "--target",
+                str(target),
+                "--host",
+                "Renamed Agent",
+                "--reload-hint",
+                "Use the newly verified refresh flow.",
+                "--dry-run",
+                "--json",
+            )
+            self.assertEqual(merged.returncode, 0, merged.stderr)
+            merged_data = json.loads(merged.stdout)
+            self.assertEqual(merged_data["host"], "Renamed Agent")
+            self.assertIn(
+                str(secondary_root.resolve()), merged_data["discovery_roots"]
+            )
+            self.assertEqual(
+                merged_data["affected_hosts"],
+                ["Current Agent", "Second Surface", "Renamed Agent"],
+            )
+            self.assertEqual(
+                merged_data["host_evidence"],
+                "The installation AI verified both live discovery roots.",
+            )
+
+            shutil.copytree(target, duplicate)
+            third_root = root / "third-skills"
+            refused = run_python(
+                target / "scripts" / "uninstall.py",
+                "--discovery-root",
+                str(third_root),
+                "--yes",
+                "--json",
+            )
+            self.assertEqual(refused.returncode, 3)
+            refused_data = json.loads(refused.stdout)
+            self.assertIn("Another discoverable", refused_data["error"])
+            self.assertTrue(target.is_dir())
+            self.assertTrue(duplicate.is_dir())
+
+            shutil.rmtree(duplicate)
+            removed = run_python(
+                target / "scripts" / "uninstall.py", "--yes", "--json"
+            )
+            self.assertEqual(removed.returncode, 0, removed.stderr)
+            self.assertFalse(target.exists())
+            removed_data = json.loads(removed.stdout)
+            self.assertTrue(removed_data["personal_data_preserved"])
+            self.assertIn(
+                removed_data["personal_data_location_basis"],
+                {"EXPERIENCE_LOOP_HOME", "default-only"},
+            )
+
+    def test_informational_host_metadata_does_not_invalidate_runtime(self) -> None:
+        installer = load_installer_module()
+        with tempfile.TemporaryDirectory(prefix="experience-loop-host-info-") as raw:
+            target = Path(raw) / "skills" / "experience-loop"
+            installed = run_script("install.py", "--target", str(target), "--json")
+            self.assertEqual(installed.returncode, 0, installed.stderr)
+            marker_path = target / ".experience-loop-install.json"
+            marker = json.loads(marker_path.read_text(encoding="utf-8"))
+            marker["host_contract"]["invocation"] = "bad\nmetadata"
+            marker["host_contract"]["reload_hint"] = "x" * 1000
+            marker_path.write_text(
+                json.dumps(marker, ensure_ascii=False, indent=2) + "\n",
+                encoding="utf-8",
+            )
+
+            self.assertIsNone(installer.managed_install_validation_error(target))
+            preview = run_script(
+                "install.py", "--target", str(target), "--dry-run", "--json"
+            )
+            self.assertEqual(preview.returncode, 0, preview.stderr)
+            preview_data = json.loads(preview.stdout)
+            self.assertIsNone(preview_data["invocation"])
+            self.assertEqual(
+                preview_data["reload_hint"],
+                "Resolve and use the current host's documented reload procedure.",
+            )
+            self.assertNotIn("x" * 20, preview_data["reload_hint"])
 
 
 if __name__ == "__main__":

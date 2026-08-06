@@ -45,10 +45,18 @@ Experience Loop does not turn real work into a course, and it does not make you 
 Copy this prompt to an AI with local terminal and filesystem access:
 
 ```text
-Using `docs/AI_INSTALL.en.md` in https://github.com/VmillHut/experience-loop, install and initialize the `experience-loop` Skill.
+Install and initialize the `experience-loop` Skill from https://github.com/VmillHut/experience-loop; follow the repository-specific safety and acceptance contract in `docs/AI_INSTALL.en.md`.
 ```
 
-The [AI installation protocol](docs/AI_INSTALL.en.md) contains the preview, permission boundaries, validation, upgrade, rollback, and post-install handoff. The README does not require you to perform those steps manually.
+The current AI handles ordinary download, directory discovery, and reload behavior. The [short AI installation contract](docs/AI_INSTALL.en.md) keeps only this repository's complete-runtime, safety, three-layer acceptance, rollback, and onboarding requirements. It does not freeze today's host paths or invocation syntax.
+
+### Platform compatibility boundary
+
+Experience Loop is not Codex-only, but it also does not claim complete support for every AI Agent. The installation AI resolves the current host's live Skill directory, invocation, reload behavior, and discovery scope from its session, help/configuration, and current official documentation when needed. It then gives those facts to deterministic installation code for safe writing and validation.
+
+The repository does not maintain a static host-path matrix that can age into misinformation. A complete install retains compatibility sidecars such as `agents/openai.yaml` so the matching host does not lose quality, but each host decides whether to consume them. They do not alter the portable core, and another host may ignore them. Real compatibility is established by three separate pieces of evidence: complete files, a healthy installed runtime, and actual host discovery.
+
+`auto`, `focus`, `deep`, `off`, personalization, source/project extensions, and the task-quality floor use the same non-degraded behavioral contract on every host. Missing host capability is reported, never hidden by removing profiles, the ledger, or Knowledge Lens. See the [dynamic host contract](references/host-compatibility.md).
 
 ## Installation does not leave you with a settings screen
 
@@ -224,20 +232,9 @@ Content-bearing project scans, document ingestion, and indexing require an expli
 
 ## Manual installation is the fallback
 
-Use the manual path only when you explicitly want to operate it yourself or the installation AI lacks local terminal access:
+In most cases, give the repository URL to an AI with local terminal and filesystem access. Only when the current AI lacks those capabilities should you switch to a capable Agent or have an operator use the installer's `--help`. The repository deliberately avoids fixed host paths and reload steps that may become stale.
 
-```bash
-git clone https://github.com/VmillHut/experience-loop.git
-cd experience-loop
-python scripts/install.py --dry-run
-python scripts/install.py
-```
-
-On Windows, use `py -3` if `python` is unavailable. Open a new Codex task after installation and send:
-
-```text
-$experience-loop is installed. Start the conversational onboarding. Every profile question is optional, then ask whether I want the roughly two-minute usage tutorial.
-```
+Installation must still continue through the receipt's validation and `onboarding_prompt`; copying files is not the end of the flow.
 
 To upgrade, download or pull the latest source and run the same installer. It recognizes managed prior versions and preserves a backup. A rollback command is printed only when that backup has a complete, validated installer; otherwise the receipt reports the backup path and why automatic rollback is unavailable. Do not use `--force` on an unrecognized target directory without explicit review and consent.
 
@@ -254,6 +251,7 @@ Its job is simpler to state and harder to do: preserve the few judgments that sh
 ## Further reading
 
 - [AI installation protocol](docs/AI_INSTALL.en.md): success criteria, boundaries, and post-install handoff for the installation Agent
+- [Dynamic host contract](references/host-compatibility.md): AI-resolved host facts with deterministic safety and truthful receipts
 - [Core Skill instructions](SKILL.md): the behavioral contract the Agent actually follows
 - [Conversational onboarding](references/onboarding.md): the fixed optional profile questions and interactive tutorial
 - [Adaptive workflow](references/workflow.md): `auto` decisions, mode flows, delegation, acceptance, and reflection

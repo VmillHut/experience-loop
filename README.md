@@ -45,10 +45,18 @@ Experience Loop 不把真实任务改造成一门课程，也不要求你为了�
 复制下面这句话，发给拥有本机终端和文件权限的 AI，即可自动完成安装与初始化：
 
 ```text
-请按照 https://github.com/VmillHut/experience-loop 仓库中的 `docs/AI_INSTALL.md`，安装并初始化 `experience-loop` Skill。
+请根据 https://github.com/VmillHut/experience-loop 安装并初始化 `experience-loop` Skill；仓库特有的安全与验收要求见 `docs/AI_INSTALL.md`。
 ```
 
-预演、权限边界、验证、升级、回滚和安装后交接均由 [AI 安装协议](docs/AI_INSTALL.md) 说明，README 不再要求你手工执行这些步骤。
+普通 Skill 的下载、目录识别和刷新方式交给当前 AI 自己处理。[AI 安装短契约](docs/AI_INSTALL.md) 只保留本仓库特有的完整运行时、安全边界、三段验收、升级回滚和安装后初始化流程，不把今天的宿主路径或调用语法写死。
+
+### 平台兼容边界
+
+Experience Loop 不是“只支持 Codex”，也不笼统承诺“所有 AI Agent 都能完整运行”。安装 AI 会根据自己当前所在宿主的实时上下文、帮助/配置和必要时的最新官方文档，现场解析 Skill 目录、调用、刷新和发现范围，再把这些事实交给确定性安装器完成安全写入与验证。
+
+仓库不维护一张会过期的静态宿主路径表。完整安装会保留 `agents/openai.yaml` 这类兼容侧车以免降低对应宿主的体验，但是否消费它由宿主决定；它不会改变通用核心，其他宿主可以忽略。真正的兼容性要由当次安装的“文件完整、运行时健康、宿主实际发现”三段证据确认。
+
+无论宿主如何，`auto`、`focus`、`deep`、`off`、画像适配、资料/项目扩展和任务质量保护使用同一份不降级行为契约。宿主能力不足会被报告为限制，不会通过删除画像、账本或 Knowledge Lens 来掩盖。细节见 [动态宿主契约](references/host-compatibility.md)。
 
 ## 安装后不是扔给你一堆设置
 
@@ -224,20 +232,9 @@ Experience Loop 的底线不是“多教一点”，而是正向净收益：
 
 ## 手工安装只是兜底
 
-只有当你明确想自己操作，或安装 AI 没有本机终端权限时，才需要手工执行：
+绝大多数情况下直接把仓库地址交给有本机终端和文件权限的 AI 即可。只有当前 AI 没有这些权限时，才需要换一个有权限的 Agent，或由操作者阅读安装器 `--help` 自行执行；仓库不提供容易随宿主更新而过期的固定目录和刷新步骤。
 
-```bash
-git clone https://github.com/VmillHut/experience-loop.git
-cd experience-loop
-python scripts/install.py --dry-run
-python scripts/install.py
-```
-
-Windows 没有 `python` 命令时可用 `py -3`。安装后新开 Codex 任务，并发送：
-
-```text
-$experience-loop 已安装。请开始对话式初始化；所有画像问题都可跳过，最后询问我是否需要约 2 分钟的使用教学。
-```
+安装后必须继续执行回执中的验证和 `onboarding_prompt`，不能只复制文件就结束。
 
 升级时重新下载或拉取最新源码，再运行同一个安装器。安装器会识别受管理的旧版本并保留备份；只有备份具备完整且可验证的安装器时才会输出回滚命令，否则会明确报告备份路径和不可自动回滚的原因。不要对未知目标目录擅自使用 `--force`。
 
@@ -254,6 +251,7 @@ $experience-loop 已安装。请开始对话式初始化；所有画像问题都
 ## 进一步阅读
 
 - [AI 安装协议](docs/AI_INSTALL.md)：给安装 Agent 的成功标准、边界和交接流程
+- [动态宿主契约](references/host-compatibility.md)：AI 动态解析宿主、安装器守住安全与真实回执
 - [Skill 核心指令](SKILL.md)：Agent 实际遵循的行为契约
 - [对话式初始化](references/onboarding.md)：固定画像问答和互动教学
 - [自适应工作流](references/workflow.md)：`auto` 决策、模式流程、委托、验收与复盘

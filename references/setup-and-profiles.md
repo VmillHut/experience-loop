@@ -57,6 +57,8 @@ Keep runtime state outside the installed Skill and source repositories. Resolve 
 2. `EXPERIENCE_LOOP_HOME` environment variable;
 3. runtime default for the current user.
 
+An explicit `--home` applies only to that command. Once a custom home is chosen, the Agent must reuse it for `setup`, `status`, `doctor`, and later lifecycle checks, or keep the same `EXPERIENCE_LOOP_HOME` in scope. Do not run an unqualified status against the default home and conclude that a customized home is uninitialized.
+
 The logical layout is:
 
 ```text
@@ -149,23 +151,23 @@ Even in `focus` or `deep`, urgent recovery takes precedence; return to deliberat
 
 Normalize legacy settings without manual migration: `ship` and `incident` become `auto`, and `coach` becomes `focus`. `deep` remains a first-class current mode. Keep accepting old command names for compatibility, but show only the four current modes in help and onboarding.
 
-## Optional global Agent router
+## Optional host-level Agent router
 
-The Skill must work without a global prompt. Offer a minimal router only to users who want implicit activation across projects.
+The Skill must work without a global prompt. Offer a minimal router only when the user explicitly wants implicit activation across projects and the current Agent has verified its host's current global-instruction mechanism. Do not rely on a static host path or translate old host instructions by analogy; use [host-compatibility.md](host-compatibility.md).
 
 Before writing:
 
-1. Locate the user's global Agent instruction file supported by the current Codex installation.
+1. Resolve the current host's global instruction file from live help/configuration or current official documentation.
 2. Read it and preserve unrelated content.
-3. Run `python scripts/global_router.py` to obtain the no-write preview when using the bundled router.
+3. Confirm the target is a Markdown instruction file, then run `python scripts/global_router.py --path <verified-file> --format markdown --host <current-host>` to obtain the no-write preview and current file hash.
 4. Show the exact proposed insertion or diff.
 5. Explain that it changes behavior in all workspaces.
-6. Obtain explicit consent before running `python scripts/global_router.py --apply --yes`.
+6. Obtain explicit consent before rerunning with `--apply --yes --expected-sha256 <preview-hash>`; if the file changed, preview it again.
 
 Keep the router short and avoid copying this Skill into the global prompt. A suitable intent is:
 
 ```text
-Use $experience-loop for substantive programming work when it can improve engineering judgment without lowering task quality. In auto, intelligently choose whether and how strongly to guide, including a brief required judgment checkpoint when participation is high-value and safe; honor “off,” “delivery only,” and urgent recovery immediately, and never create focus or deep as a standing contract implicitly.
+Use the locally installed experience-loop Skill for substantive programming work when it can improve engineering judgment without lowering task quality. In auto, intelligently choose whether and how strongly to guide, including a brief required judgment checkpoint when participation is high-value and safe; honor “off,” “delivery only,” and urgent recovery immediately, and never create focus or deep as a standing contract implicitly.
 ```
 
 Do not write a project-level router unless the user explicitly asks for team-wide behavior.

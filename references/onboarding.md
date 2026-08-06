@@ -34,7 +34,7 @@ Do not add more questions unless an answer is ambiguous enough to prevent a corr
 
 ### Turn 2: persist only answered fields
 
-Map explicit answers to the runtime's `setup` fields. Store presentation preferences in `explanation_style` and interruption/participation preferences in `guidance_preference`; do not merge them. Repeated responsibilities, domains, goals, and learning directions may be passed more than once. If the user skips everything, run default `setup` with no optional profile arguments. Do not add a project path or content-access confirmation unless separately authorized.
+Map explicit answers to the runtime's `setup` fields. Store presentation preferences in `explanation_style` and interruption/participation preferences in `guidance_preference`; do not merge them. Repeated responsibilities, domains, goals, and learning directions may be passed more than once. If the user skips everything, run default `setup` with no optional profile arguments. Do not add a project path or content-access confirmation unless separately authorized. If the user explicitly supplied a custom runtime home, reuse that same `--home` (or the same `EXPERIENCE_LOOP_HOME`) for `setup`, follow-up `status`, and `doctor`; receipt commands do not remember a one-off `--home` value.
 
 After a successful write, summarize only the saved fields and the external data location. Then ask exactly one decision:
 

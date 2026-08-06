@@ -1,6 +1,6 @@
 ---
 name: experience-loop
-description: Delivery-first capability sidecar for Agent-assisted software work when a task contains reusable judgment about framing, systems, verification, reliability, delegation, or ownership, or when the user requests focused/deep growth or source-backed practice. In auto, intelligently decide whether and how strongly guidance creates positive net value; skip learning work for mechanical, urgent delivery-only, or explicit off requests. Supports auto/focus/deep/off, passive personalization, evidence tracking, project and exemplar inspection, and a local Knowledge Lens.
+description: Delivery-first capability sidecar for Agent-assisted software work on compatible Agent Skills hosts when a task contains reusable judgment about framing, systems, verification, reliability, delegation, or ownership, or when the user requests focused/deep growth or source-backed practice. In auto, intelligently decide whether and how strongly guidance creates positive net value; skip learning work for mechanical, urgent delivery-only, or explicit off requests. Supports auto/focus/deep/off, passive personalization, evidence tracking, project and exemplar inspection, and a local Knowledge Lens.
 ---
 
 # Experience Loop
@@ -54,7 +54,7 @@ Accept legacy `ship` and `incident` as `auto`, and `coach` as `focus`. `deep` is
 - Load a saved profile only when it is customized and can change the chosen learning seam, explanation, terminology, or depth. Never consume content-bearing profile fields on the fast path or in `off`.
 - Respect saved privacy boundaries before any content-bearing scan, ingestion, query, or reindex operation.
 
-Read [setup-and-profiles.md](references/setup-and-profiles.md) only for actual setup, profile updates, privacy behavior, project-profile persistence, migration, portability, or the optional global router. Use runtime `--help` instead of memorizing command flags.
+Read [setup-and-profiles.md](references/setup-and-profiles.md) only for actual setup, profile updates, privacy behavior, project-profile persistence, migration, portability, or an explicitly requested host router. For installation or host discovery, read [host-compatibility.md](references/host-compatibility.md). Use runtime `--help` instead of memorizing command flags.
 
 ## Personalize without configuration burden
 
@@ -130,6 +130,7 @@ Do not end by asking the user to configure a profile or choose another mode. Pro
 
 - [onboarding.md](references/onboarding.md): fixed post-install conversation, optional profile questions, and the short interactive tutorial.
 - [setup-and-profiles.md](references/setup-and-profiles.md): setup, passive profile fields, privacy, project profiles, router, portability.
+- [host-compatibility.md](references/host-compatibility.md): portable core, host adapters, discovery claims, and capability receipts.
 - [workflow.md](references/workflow.md): focus/deep recipes, adaptive control, delegation, review, verification, reflection.
 - [capability-compass.md](references/capability-compass.md): six capability directions, fundamentals, target selection, trajectory review.
 - [experience-model.md](references/experience-model.md): evidence semantics, assistance, confidence, correction, transfer.

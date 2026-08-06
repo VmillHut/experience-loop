@@ -68,6 +68,15 @@ class RepositoryContractTests(unittest.TestCase):
         self.assertIn("Ordinary `auto` work should not need it.", skill)
         self.assertIn("references/capability-compass.md", skill)
         self.assertTrue((ROOT / "references" / "capability-compass.md").is_file())
+        self.assertIn("references/host-compatibility.md", skill)
+        compatibility = (ROOT / "references" / "host-compatibility.md").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn("must not remove or rewrite", compatibility)
+        self.assertIn("File installation alone is not host support", compatibility)
+        self.assertIn("must not freeze today's directory", compatibility)
+        self.assertNotIn("~/.claude/skills", compatibility)
+        self.assertNotIn("~/.agents/skills", compatibility)
 
     def test_readmes_define_ai_first_installation_and_all_four_modes(self) -> None:
         readme = (ROOT / "README.md").read_text(encoding="utf-8")
@@ -76,11 +85,16 @@ class RepositoryContractTests(unittest.TestCase):
         self.assertIn("## 安装方式", readme)
         self.assertIn("docs/AI_INSTALL.md", readme)
         install_prompt = (
-            "请按照 https://github.com/VmillHut/experience-loop 仓库中的 "
-            "`docs/AI_INSTALL.md`，安装并初始化 `experience-loop` Skill。"
+            "请根据 https://github.com/VmillHut/experience-loop 安装并初始化 "
+            "`experience-loop` Skill；仓库特有的安全与验收要求见 "
+            "`docs/AI_INSTALL.md`。"
         )
         self.assertEqual(readme.count(install_prompt), 1)
         self.assertIn("references/onboarding.md", readme)
+        self.assertIn("平台兼容边界", readme)
+        self.assertIn("不把今天的宿主路径或调用语法写死", readme)
+        self.assertIn("三段证据", readme)
+        self.assertNotIn("~/.claude/skills", readme)
         self.assertIn("`auto` 不是弱模式", readme)
         self.assertIn("必答判断检查点", readme)
         self.assertIn("短训练循环", readme)
@@ -92,6 +106,9 @@ class RepositoryContractTests(unittest.TestCase):
 
         self.assertIn("## Installation", readme_en)
         self.assertIn("docs/AI_INSTALL.en.md", readme_en)
+        self.assertIn("Platform compatibility boundary", readme_en)
+        self.assertIn("does not freeze today's host paths", readme_en)
+        self.assertIn("three separate pieces of evidence", readme_en)
         self.assertIn("`auto` is not the weak mode", readme_en)
         self.assertIn("required judgment checkpoint", readme_en.lower())
         self.assertIn("short guided practice loop", readme_en.lower())
@@ -112,27 +129,63 @@ class RepositoryContractTests(unittest.TestCase):
         onboarding = onboarding_path.read_text(encoding="utf-8")
 
         for protocol in (install_zh, install_en):
-            self.assertIn("--dry-run", protocol)
             self.assertIn("--force", protocol)
-            self.assertIn("AGENTS.md", protocol)
+            self.assertIn("scripts/install.py --help", protocol)
             self.assertIn("doctor", protocol)
             self.assertIn("status", protocol)
             self.assertIn("onboarding", protocol.lower())
+            self.assertNotIn("~/.agents/skills", protocol)
+            self.assertNotIn("~/.claude/skills", protocol)
+            self.assertNotIn("copilot-cli", protocol.lower())
+
+        self.assertLessEqual(len(install_zh.splitlines()), 75)
+        self.assertLessEqual(len(install_en.splitlines()), 75)
 
         self.assertIn("不扫描项目、不读取资料", install_zh)
-        self.assertIn("全部可选", install_zh)
+        self.assertIn("所有字段都可选", install_zh)
+        self.assertIn("不要把宿主目录、安装参数或刷新方式转交给用户选择", install_zh)
+        self.assertIn("最终只给一个当前必要的 `next_action`", install_zh)
+        self.assertIn("所有写入必须使用仓库安装器", install_zh)
+        self.assertIn("--dry-run --json", install_zh)
+        self.assertIn("完全相同的契约", install_zh)
         self.assertIn("不要用静默降级伪造成功", install_zh)
         self.assertIn("rollback_available", install_zh)
         self.assertIn("rollback_note", install_zh)
-        self.assertIn("Every profile question is optional", install_en)
-        self.assertIn("does not authorize", install_en.lower())
+        self.assertIn("Every field is optional", install_en)
+        self.assertIn("does not also authorize", install_en.lower())
         self.assertIn("rollback_note", install_en)
+        self.assertIn("actual discovery or invocation", install_en)
+        self.assertIn("Never remove profiles", install_en)
+        self.assertIn("Do not hand host-directory", install_en)
+        self.assertIn("exactly one currently necessary `next_action`", install_en)
+        self.assertIn("every write must use the bundled installer", install_en)
+        self.assertIn("identical contract", install_en)
+
+        installer = (ROOT / "scripts" / "install.py").read_text(encoding="utf-8")
+        for stale_host_fact in (
+            "CODEX_HOME",
+            "~/.agents/skills",
+            "~/.claude/skills",
+            "copilot-cli",
+        ):
+            self.assertNotIn(stale_host_fact, installer)
+        self.assertIn("--host-evidence", installer)
+        self.assertIn("--discovery-root", installer)
+        self.assertIn("discovery_roots_coverage", installer)
+
+        router = (ROOT / "scripts" / "global_router.py").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn('choices=("markdown",)', router)
+        self.assertIn("--expected-sha256", router)
+        self.assertIn("Multiple Experience Loop router blocks", router)
 
         self.assertIn("全部跳过", onboarding)
         self.assertIn("guidance_preference", onboarding)
         self.assertIn("Do not scan a project", onboarding)
         self.assertIn("Do not scan a project, ingest a document", onboarding)
         self.assertIn("约 2 分钟的对话式使用教学", onboarding)
+        self.assertIn("receipt commands do not remember a one-off `--home`", onboarding)
         self.assertIn("required judgment", onboarding)
         self.assertIn("short guided", onboarding)
         for mode in ("auto", "focus", "deep", "off"):
