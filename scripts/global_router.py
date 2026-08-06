@@ -19,10 +19,10 @@ END = "<!-- experience-loop:router:end -->"
 ROUTER = f"""{START}
 For software-development work, apply `$experience-loop` as a delivery-first
 learning layer when requirements, architecture, debugging, review, testing, or
-acceptance contain a meaningful judgment opportunity. Default to `ship` mode:
-do not block routine delivery, ask at most one high-value decision question,
-verify the result, and keep the retrospective short. Respect "delivery only",
-`off`, and urgent incident requests immediately.
+acceptance contain a meaningful judgment opportunity. Default to `auto` mode:
+adapt silently to urgency, consequence, uncertainty, and learning value; require
+no learning answer, verify the result, and keep any retrospective short. Respect
+"delivery only" and `off` immediately.
 {END}
 """
 

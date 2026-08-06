@@ -21,6 +21,11 @@ class RepositoryContractTests(unittest.TestCase):
         self.assertGreater(len(description), 60)
         self.assertIn("when", description.lower())
         self.assertLessEqual(len(skill.splitlines()), 500)
+        self.assertIn("| `auto` |", skill)
+        self.assertIn("| `focus` |", skill)
+        self.assertIn("| `off` |", skill)
+        self.assertIn("references/capability-compass.md", skill)
+        self.assertTrue((ROOT / "references" / "capability-compass.md").is_file())
 
     def test_openai_metadata_is_utf8_and_invokes_the_skill(self) -> None:
         metadata = (ROOT / "agents" / "openai.yaml").read_text(encoding="utf-8")

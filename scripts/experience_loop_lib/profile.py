@@ -5,7 +5,7 @@ from __future__ import annotations
 import re
 from typing import Any, Dict, Iterable, Optional
 
-from .common import MODES, SCHEMA_VERSION, DataCorruptionError, ExperienceLoopError, atomic_write_json, load_json, utc_now
+from .common import SCHEMA_VERSION, DataCorruptionError, ExperienceLoopError, atomic_write_json, load_json, normalize_mode, utc_now
 from .storage import Store
 
 
@@ -37,7 +37,7 @@ def default_profile() -> Dict[str, Any]:
         "experience_level": None,
         "goals": [],
         "learning_focus": [],
-        "mode": "ship",
+        "mode": "auto",
         "privacy": "normal",
         "customized": False,
         "content_trust": "untrusted-user-provided-data",
@@ -53,8 +53,10 @@ def validate_profile(value: Any) -> Dict[str, Any]:
         raise DataCorruptionError("profile.json 必须是 JSON 对象。")
     if value.get("schema_version") != SCHEMA_VERSION:
         raise DataCorruptionError("profile.json 版本无效。")
-    if value.get("mode") not in MODES:
-        raise DataCorruptionError("profile.json 包含未知工作模式。")
+    try:
+        value["mode"] = normalize_mode(value.get("mode"))
+    except ExperienceLoopError as exc:
+        raise DataCorruptionError("profile.json 包含未知工作模式。") from exc
     if value.get("privacy", "normal") not in PRIVACY_LEVELS:
         raise DataCorruptionError("profile.json 包含未知隐私级别。")
     for key in ("goals", "learning_focus"):
@@ -147,9 +149,7 @@ def configure_profile(
         elif clean_focus:
             profile["learning_focus"] = _clean_many(profile.get("learning_focus", []) + clean_focus)
         if mode is not None:
-            if mode not in MODES:
-                raise ExperienceLoopError("未知模式：%s" % mode)
-            profile["mode"] = mode
+            profile["mode"] = normalize_mode(mode)
         if privacy is not None:
             if privacy not in PRIVACY_LEVELS:
                 raise ExperienceLoopError("未知隐私级别：%s" % privacy)
@@ -166,6 +166,4 @@ def configure_profile(
 
 
 def set_mode(store: Store, mode: str) -> Dict[str, Any]:
-    if mode not in MODES:
-        raise ExperienceLoopError("未知模式：%s" % mode)
-    return configure_profile(store, mode=mode)
+    return configure_profile(store, mode=normalize_mode(mode))

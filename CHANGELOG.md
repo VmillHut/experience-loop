@@ -4,6 +4,18 @@ All notable user-facing changes to this project are documented here. The format 
 
 ## [Unreleased]
 
+### Added
+
+- Adaptive task control that silently balances delivery pressure, consequence, uncertainty, and learning value.
+- A six-direction capability compass and evidence summaries for problem framing, system modeling, verification, reliability, Agent leverage, and ownership.
+- Cognitive-coverage, delegation-calibration, and real-user or production feedback guidance for consequential work.
+- Progressive personalization that keeps profiles, Knowledge Lens inputs, data and article paths, and exemplar-project comparison available through one-sentence or one-path inputs.
+
+### Changed
+
+- Simplified user-facing modes to `auto`, `focus`, and `off`; legacy `ship`/`incident` and `coach`/`deep` inputs remain compatible and normalize automatically.
+- Made first-run setup zero-configuration by default and removed routine mode-selection prompts.
+
 ## [0.1.0] - 2026-08-05
 
 ### Added

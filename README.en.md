@@ -53,7 +53,6 @@ Open a new Codex session after installation and say:
 ```text
 $experience-loop setup. Scan the current project.
 I work mainly on client development and want to improve architecture decisions and code review.
-Use ship mode by default.
 ```
 
 Then delegate work as usual:
@@ -62,7 +61,9 @@ Then delegate work as usual:
 Use $experience-loop to diagnose and fix this reconnect bug. It must be ready for QA today.
 ```
 
-You do not need to edit project instructions or learn a separate command system. The Agent handles setup, project scanning, and normal use.
+You do not need to edit project instructions or learn a separate command system. The default `auto` behavior adapts to deadline pressure, consequence, uncertainty, and the task's growth value without asking you to choose a mode every time.
+
+Later personalization still needs no settings screen: add one sentence such as “I now own the payment path and want stronger reliability judgment,” provide an article or data path, or say “use `D:\Repos\reference-project` as a testing-architecture reference.” The Agent updates only the necessary profile fields, builds the local index, or scans the reference project read-only while leaving everything else at its defaults.
 
 ## It changes where you participate, not who types the code
 
@@ -75,6 +76,8 @@ You do not need to edit project instructions or learn a separate command system.
 
 You do not need to hand-write mechanical code the Agent can safely execute. Human attention is better spent on architecture boundaries, root causes, evidence selection, review, and final acceptance.
 
+Internally, the Skill selects at most one direction worth strengthening: problem framing, system modeling, verification, reliability, Agent leverage, or end-to-end ownership. It adapts from real decisions and evidence instead of asking you to maintain a skill matrix or complete a curriculum.
+
 ## What it looks like in real work
 
 ### Daily delivery: ship on time and recover one key judgment
@@ -83,12 +86,12 @@ You do not need to hand-write mechanical code the Agent can safely execute. Huma
 Implement this cache invalidation change. It needs to reach QA this week.
 ```
 
-The default `ship` mode analyzes, edits, and verifies normally. It usually surfaces only one consequential decision you can challenge, then closes with a compact reusable engineering rule instead of a lecture.
+The default `auto` behavior analyzes, edits, and verifies normally. Low-risk work stays quiet; a consequential fork may surface one optional challenge; deadlines and incidents recover first; high-consequence changes automatically receive stronger evidence, rollback, and acceptance coverage.
 
 ### Deliberate practice: predict before seeing the evidence
 
 ```text
-Use coach mode. I want to practice root-cause analysis, so ask for one prediction before opening the decisive logs.
+Use focus mode. I want to practice root-cause analysis, so ask for one prediction before opening the decisive logs.
 ```
 
 The Agent asks for one low-friction prediction and tests it against code, logs, or tests. A wrong prediction is useful when the evidence makes the correction clear.
@@ -96,7 +99,7 @@ The Agent asks for one low-friction prediction and tests it against code, logs, 
 ### Incident response: restore first, reflect afterward
 
 ```text
-The production build is broken. Use incident mode and restore the release first.
+The production build is broken. Restore the release first, then run a short retrospective after health is verified.
 ```
 
 No teaching interruptions appear during recovery. Once health is restored and verified, the Agent produces a short timeline of expectations, observations, differences, and prevention cues.
@@ -104,24 +107,22 @@ No teaching interruptions appear during recovery. Once health is restored and ve
 ### Architecture work: use the Agent as a review partner
 
 ```text
-Use deep mode to review this state-synchronization design. Compare options, costs, and failure conditions before editing code.
+Use focus mode to review this state-synchronization design. Compare options, costs, and failure conditions before editing code.
 ```
 
-`deep` is for focused study, design review, and transfer practice rather than every daily task.
+`focus` is for deliberate practice, design review, and transfer work rather than every daily task.
 
 ## Will it slow delivery down?
 
-Not significantly in the default mode. `ship` is limited to **zero or one short checkpoint**. Use `incident` under pressure, or switch to `off` whenever you want only execution.
+Not significantly. `auto` requires **zero learning answers** and allows at most one skippable short checkpoint. It detects deadlines, incidents, and high-risk work itself. Use `focus` only when you want deliberate practice, or switch to `off` for execution only.
 
 | Mode | Best for | Effect on work rhythm |
 | --- | --- | --- |
-| `ship` | Normal development; default | 0–1 short checkpoint |
-| `coach` | Practicing one skill during work | 1–2 predictions or reviews |
-| `deep` | Architecture and dedicated study | Depth agreed with you |
-| `incident` | Outages and broken builds | Recovery first, review afterward |
+| `auto` | Almost all normal work; default | Adapts internally; zero required learning answers and at most one optional checkpoint |
+| `focus` | Deliberate practice, architecture, or a deeper review | 1–2 purposeful predictions, trade-offs, or review points |
 | `off` | Execution only | No learning layer or event recording |
 
-Change modes in any request without running setup again.
+Change modes in any request without running setup again. Legacy `ship` / `incident` inputs map to `auto`, while `coach` / `deep` map to `focus`, so upgrades require no manual migration.
 
 ## Knowledge Lens: use books inside real projects
 
@@ -204,7 +205,8 @@ Personal profiles, project records, experience events, and knowledge indexes liv
 ## Go deeper
 
 - [Skill instructions](SKILL.md): the workflow the Agent actually follows
-- [Learning loop and modes](references/workflow.md): checkpoints, acceptance, and reflection
+- [Adaptive workflow](references/workflow.md): internal control, delegation, acceptance, and reflection
+- [Capability compass](references/capability-compass.md): six durable directions and evidence-based growth
 - [Knowledge Lens](references/knowledge-lens.md): ingestion, retrieval, and citations
 - [Changelog](CHANGELOG.md) · [Contributing](CONTRIBUTING.md) · [Security](SECURITY.md)
 

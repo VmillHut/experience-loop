@@ -19,7 +19,7 @@ Requirements:
 Run the CLI in an isolated home so development never touches personal data:
 
 ```bash
-python scripts/experience_loop.py --home .tmp-experience-loop setup --mode ship
+python scripts/experience_loop.py --home .tmp-experience-loop setup --mode auto
 python scripts/experience_loop.py --home .tmp-experience-loop doctor
 ```
 

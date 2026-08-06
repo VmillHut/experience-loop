@@ -27,7 +27,21 @@ EXIT_CORRUPT = 6
 EXIT_IO = 7
 EXIT_UNEXPECTED = 10
 
-MODES = ("ship", "coach", "deep", "incident", "off")
+MODES = ("auto", "focus", "off")
+LEGACY_MODE_ALIASES = {
+    "ship": "auto",
+    "coach": "focus",
+    "deep": "focus",
+    "incident": "auto",
+}
+CAPABILITIES = (
+    "problem-framing",
+    "system-modeling",
+    "verification",
+    "reliability",
+    "agent-leverage",
+    "ownership",
+)
 
 
 class ExperienceLoopError(Exception):
@@ -48,6 +62,17 @@ class DataCorruptionError(ExperienceLoopError):
 class DependencyError(ExperienceLoopError):
     def __init__(self, message: str, details: Optional[Dict[str, Any]] = None):
         super().__init__(message, EXIT_DEPENDENCY, details)
+
+
+def normalize_mode(value: str) -> str:
+    """Return one of the three user-facing modes, accepting legacy aliases."""
+    cleaned = str(value).strip().lower()
+    normalized = LEGACY_MODE_ALIASES.get(cleaned, cleaned)
+    if normalized not in MODES:
+        raise ExperienceLoopError(
+            "未知模式：%s。可用模式为 auto、focus、off。" % value
+        )
+    return normalized
 
 
 def resolve_home(explicit: Optional[str] = None) -> Path:

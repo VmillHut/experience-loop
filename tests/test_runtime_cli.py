@@ -29,6 +29,13 @@ class RuntimeCliTests(unittest.TestCase):
             self.assertIn("退出码 3", knowledge_help.stdout)
             self.assertIn("成功项会保留", knowledge_help.stdout)
 
+            mode_help = run_cli(home, "mode", "--help")
+            self.assertEqual(mode_help.returncode, 0, mode_help.stderr)
+            self.assertIn("auto", mode_help.stdout)
+            self.assertIn("focus", mode_help.stdout)
+            self.assertIn("off", mode_help.stdout)
+            self.assertNotIn("ship", mode_help.stdout)
+
     def test_setup_is_idempotent_and_preserves_custom_profile(self) -> None:
         with tempfile.TemporaryDirectory(prefix="experience-loop-runtime-") as raw:
             root = Path(raw)
@@ -62,7 +69,7 @@ class RuntimeCliTests(unittest.TestCase):
             self.assertEqual(profile["experience_level"], "1-3 years")
             self.assertEqual(profile["goals"], ["架构决策", "代码审查"])
             self.assertEqual(profile["learning_focus"], ["测试设计", "故障诊断"])
-            self.assertEqual(profile["mode"], "coach")
+            self.assertEqual(profile["mode"], "focus")
             self.assertEqual(profile["privacy"], "restricted")
             self.assertTrue(profile["customized"])
             self.assertTrue((home / "state.json").is_file())
@@ -84,6 +91,24 @@ class RuntimeCliTests(unittest.TestCase):
                 "created_at",
             ):
                 self.assertEqual(second_profile[field], profile[field], field)
+
+    def test_default_mode_and_legacy_profiles_normalize_without_user_migration(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="experience-loop-mode-migration-") as raw:
+            home = Path(raw) / "data"
+            setup = assert_ok(self, run_cli(home, "setup"))
+            self.assertEqual(setup["profile"]["mode"], "auto")
+
+            profile_path = home / "profile.json"
+            persisted = json.loads(profile_path.read_text(encoding="utf-8"))
+            persisted["mode"] = "incident"
+            profile_path.write_text(
+                json.dumps(persisted, ensure_ascii=False), encoding="utf-8"
+            )
+
+            status = assert_ok(self, run_cli(home, "status"))
+            self.assertEqual(status["mode"], "auto")
+            switched = assert_ok(self, run_cli(home, "mode", "deep"))
+            self.assertEqual(switched["mode"], "focus")
 
     def test_status_distinguishes_sources_placeholders_and_storage_files(self) -> None:
         with tempfile.TemporaryDirectory(prefix="experience-loop-status-") as raw:
@@ -174,6 +199,46 @@ class RuntimeCliTests(unittest.TestCase):
             review = assert_ok(self, run_cli(home, "ledger", "review"))
             self.assertEqual(review["total_events"], 0)
             self.assertEqual(review["xp_total"], 0)
+
+    def test_ledger_groups_evidence_by_capability_without_scoring_gaps(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="experience-loop-capability-") as raw:
+            home = Path(raw) / "data"
+            assert_ok(self, run_cli(home, "setup"))
+            assert_ok(
+                self,
+                run_cli(
+                    home,
+                    "ledger",
+                    "record",
+                    "--kind",
+                    "verification",
+                    "--summary",
+                    "确认重试边界由失败路径测试覆盖",
+                    "--capability",
+                    "verification",
+                    "--independence",
+                    "independent",
+                    "--evidence",
+                    "python -m unittest tests.test_retry",
+                ),
+            )
+
+            review = assert_ok(self, run_cli(home, "ledger", "review"))
+            self.assertEqual(
+                review["capability_evidence"],
+                [
+                    {
+                        "capability": "verification",
+                        "events": 1,
+                        "evidence_events": 1,
+                        "independent_events": 1,
+                        "correction_events": 0,
+                        "transfer_events": 0,
+                        "latest_timestamp": review["events"][0]["timestamp"],
+                    }
+                ],
+            )
+            self.assertNotIn("weakest", review)
 
     def test_profile_can_replace_and_clear_stale_learning_targets(self) -> None:
         with tempfile.TemporaryDirectory(prefix="experience-loop-profile-") as raw:

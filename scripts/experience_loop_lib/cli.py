@@ -13,18 +13,19 @@ from typing import Any, Dict, List, Optional, Sequence, Tuple
 
 from .archive import export_archive, import_archive
 from .common import (
+    CAPABILITIES,
     EXIT_IO,
     EXIT_OK,
     EXIT_OPERATION_FAILED,
     EXIT_PARTIAL,
     EXIT_UNEXPECTED,
     EXIT_USAGE,
-    MODES,
     SCHEMA_VERSION,
     VERSION,
     DataCorruptionError,
     DependencyError,
     ExperienceLoopError,
+    normalize_mode,
 )
 from .ledger import INDEPENDENCE_LEVELS, KINDS, load_events, record_event, review_events
 from .profile import PRIVACY_LEVELS, configure_profile, load_profile, set_mode, validate_profile
@@ -75,6 +76,13 @@ class RuntimeArgumentParser(argparse.ArgumentParser):
         raise ExperienceLoopError("命令参数无效：%s" % message, EXIT_USAGE)
 
 
+def _mode_value(value: str) -> str:
+    try:
+        return normalize_mode(value)
+    except ExperienceLoopError as exc:
+        raise argparse.ArgumentTypeError(exc.message) from exc
+
+
 def _parser() -> argparse.ArgumentParser:
     parser = RuntimeArgumentParser(
         prog="experience-loop",
@@ -91,7 +99,9 @@ def _parser() -> argparse.ArgumentParser:
     setup.add_argument("--experience-level", help="经验阶段，例如 junior、1-3 years 或 senior")
     setup.add_argument("--goal", action="append", default=[])
     setup.add_argument("--learning-focus", action="append", default=[])
-    setup.add_argument("--mode", choices=MODES, default=None)
+    setup.add_argument(
+        "--mode", type=_mode_value, metavar="{auto,focus,off}", default=None
+    )
     setup.add_argument("--privacy", choices=PRIVACY_LEVELS, default=None)
     setup.add_argument("--project", help="初始化后立即只读扫描的主项目目录")
     setup.add_argument(
@@ -117,14 +127,16 @@ def _parser() -> argparse.ArgumentParser:
     profile_update.add_argument("--learning-focus", action="append")
     profile_update.add_argument("--replace-learning-focus", action="store_true")
     profile_update.add_argument("--clear-learning-focus", action="store_true")
-    profile_update.add_argument("--mode", choices=MODES)
+    profile_update.add_argument(
+        "--mode", type=_mode_value, metavar="{auto,focus,off}"
+    )
     profile_update.add_argument("--privacy", choices=PRIVACY_LEVELS)
     doctor = commands.add_parser("doctor", help="检查运行环境和数据完整性")
     doctor.add_argument("--repair", action="store_true", help="补齐安全的缺失目录、默认文件和私有权限")
     doctor.add_argument("--deep", action="store_true", help="额外校验每个当前资料对象的 SHA-256")
 
     mode = commands.add_parser("mode", help="查看或切换工作模式")
-    mode.add_argument("value", nargs="?", choices=MODES)
+    mode.add_argument("value", nargs="?", type=_mode_value, metavar="{auto,focus,off}")
 
     project = commands.add_parser("project", help="管理项目画像")
     project_commands = project.add_subparsers(dest="project_command", required=True)
@@ -171,6 +183,11 @@ def _parser() -> argparse.ArgumentParser:
     record.add_argument("--project")
     record.add_argument("--evidence", action="append", default=[])
     record.add_argument("--concept", action="append", default=[])
+    record.add_argument(
+        "--capability",
+        choices=CAPABILITIES,
+        help="本事件对应的长期能力方向；通常由 Agent 自动选择",
+    )
     record.add_argument("--independence", choices=INDEPENDENCE_LEVELS, default="guided")
     record.add_argument("--outcome")
     record.add_argument("--prior-event", help="迁移事件所复用的先前经验事件 ID")
@@ -736,6 +753,7 @@ def _dispatch(namespace: argparse.Namespace, store: Store) -> Dict[str, Any]:
                 project_id=namespace.project,
                 evidence=namespace.evidence,
                 concepts=namespace.concept,
+                capability=namespace.capability,
                 independence=namespace.independence,
                 outcome=namespace.outcome,
                 confidence=namespace.confidence,

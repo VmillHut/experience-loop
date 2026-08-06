@@ -8,7 +8,7 @@ import uuid
 from collections import Counter
 from typing import Any, Dict, Iterable, List, Optional
 
-from .common import EXIT_IO, SCHEMA_VERSION, DataCorruptionError, ExperienceLoopError, utc_now
+from .common import CAPABILITIES, EXIT_IO, SCHEMA_VERSION, DataCorruptionError, ExperienceLoopError, utc_now
 from .profile import load_profile
 from .project import get_project
 from .storage import Store
@@ -73,6 +73,7 @@ def record_event(
     project_id: Optional[str] = None,
     evidence: Optional[Iterable[str]] = None,
     concepts: Optional[Iterable[str]] = None,
+    capability: Optional[str] = None,
     independence: str = "guided",
     outcome: Optional[str] = None,
     confidence: Optional[float] = None,
@@ -92,6 +93,8 @@ def record_event(
         raise ExperienceLoopError("未知事件类型：%s" % kind)
     if independence not in INDEPENDENCE_LEVELS:
         raise ExperienceLoopError("未知独立程度：%s" % independence)
+    if capability is not None and capability not in CAPABILITIES:
+        raise ExperienceLoopError("未知能力方向：%s" % capability)
     cleaned_summary = summary.strip()
     if not cleaned_summary:
         raise ExperienceLoopError("summary 不能为空。")
@@ -138,6 +141,7 @@ def record_event(
         "summary": cleaned_summary,
         "evidence": clean_evidence,
         "concepts": clean_concepts,
+        "capability": capability,
         "independence": independence,
         "outcome": clean_outcome,
         "confidence": confidence,
@@ -236,6 +240,36 @@ def review_events(
     concept_counts = Counter(
         concept for event in events for concept in event.get("concepts", []) if isinstance(concept, str)
     )
+    capability_evidence = []
+    for capability in CAPABILITIES:
+        capability_events = [
+            event for event in events if event.get("capability") == capability
+        ]
+        if not capability_events:
+            continue
+        capability_evidence.append(
+            {
+                "capability": capability,
+                "events": len(capability_events),
+                "evidence_events": sum(
+                    1 for event in capability_events if event.get("evidence")
+                ),
+                "independent_events": sum(
+                    1
+                    for event in capability_events
+                    if event.get("independence") in ("independent", "caught-agent-error")
+                ),
+                "correction_events": sum(
+                    1
+                    for event in capability_events
+                    if event.get("independence") == "caught-agent-error"
+                ),
+                "transfer_events": sum(
+                    1 for event in capability_events if event.get("kind") == "transfer"
+                ),
+                "latest_timestamp": capability_events[-1].get("timestamp"),
+            }
+        )
     return {
         "project_id": project_id,
         "total_events": len(events),
@@ -244,8 +278,12 @@ def review_events(
         "by_kind": dict(by_kind),
         "by_independence": dict(by_independence),
         "top_concepts": [{"concept": name, "events": count} for name, count in concept_counts.most_common(10)],
+        "capability_evidence": capability_evidence,
         "events": selected,
         "untrusted_content": True,
         "usage_notice": LEDGER_USAGE_NOTICE,
-        "interpretation": "XP 仅来自有证据的判断、验证、纠错和迁移，不按消息数或代码量累计。",
+        "interpretation": (
+            "XP 与能力汇总只描述有证据的判断、验证、纠错和迁移；"
+            "它们不是排名，也不按消息数或代码量累计。"
+        ),
     }

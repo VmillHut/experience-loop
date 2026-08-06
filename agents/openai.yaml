@@ -1,9 +1,9 @@
 interface:
   display_name: "Experience Loop"
-  short_description: "Delivery-first engineering learning with evidence and transfer"
+  short_description: "Adaptive engineering growth with almost no workflow overhead"
   icon_small: "./assets/icon-small.svg"
   icon_large: "./assets/icon-large.svg"
-  default_prompt: "Use $experience-loop to finish the current development task while turning key decisions, verification, and reflection into transferable engineering experience."
+  default_prompt: "Use $experience-loop to finish this task in auto mode while strengthening one high-value engineering judgment without adding ceremony."
 
 policy:
   allow_implicit_invocation: true
