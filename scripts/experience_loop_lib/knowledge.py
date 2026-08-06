@@ -1117,9 +1117,10 @@ def integrity_check(
             missing_fts = int(
                 connection.execute(
                     """
-                    SELECT COUNT(*) FROM chunks c
-                    WHERE NOT EXISTS (
-                        SELECT 1 FROM chunk_fts f WHERE f.chunk_id = c.chunk_id
+                    SELECT COUNT(*) FROM (
+                        SELECT chunk_id FROM chunks
+                        EXCEPT
+                        SELECT chunk_id FROM chunk_fts
                     )
                     """
                 ).fetchone()[0]
@@ -1127,9 +1128,10 @@ def integrity_check(
             extra_fts = int(
                 connection.execute(
                     """
-                    SELECT COUNT(*) FROM chunk_fts f
-                    WHERE NOT EXISTS (
-                        SELECT 1 FROM chunks c WHERE c.chunk_id = f.chunk_id
+                    SELECT COUNT(*) FROM (
+                        SELECT chunk_id FROM chunk_fts
+                        EXCEPT
+                        SELECT chunk_id FROM chunks
                     )
                     """
                 ).fetchone()[0]
@@ -1967,19 +1969,30 @@ def _initialize_schema(connection: sqlite3.Connection) -> None:
         _backfill_missing_fts_rows(connection)
 
 
-def _backfill_missing_fts_rows(connection: sqlite3.Connection) -> None:
-    rows = connection.execute(
+def _missing_fts_rows(connection: sqlite3.Connection) -> List[sqlite3.Row]:
+    return connection.execute(
         """
-        SELECT c.chunk_id, c.source_id, c.revision_id, c.text, c.heading, s.title
-        FROM chunks c JOIN sources s ON s.source_id = c.source_id
-        WHERE NOT EXISTS (
-            SELECT 1 FROM chunk_fts f WHERE f.chunk_id = c.chunk_id
+        WITH missing_chunks(chunk_id) AS (
+            SELECT chunk_id FROM chunks
+            EXCEPT
+            SELECT chunk_id FROM chunk_fts
         )
+        SELECT c.chunk_id, c.source_id, c.revision_id, c.text, c.heading, s.title
+        FROM missing_chunks m
+        JOIN chunks c ON c.chunk_id = m.chunk_id
+        JOIN sources s ON s.source_id = c.source_id
         """
     ).fetchall()
+
+
+def _backfill_missing_fts_rows(connection: sqlite3.Connection) -> None:
+    rows = _missing_fts_rows(connection)
     if not rows:
         return
     with _transaction(connection):
+        # A second direct API caller may have repaired the rows while this
+        # connection waited for the write lock. Re-read to avoid duplicates.
+        rows = _missing_fts_rows(connection)
         for row in rows:
             index_text = "\n".join(
                 value for value in (row["title"], row["heading"], row["text"]) if value
