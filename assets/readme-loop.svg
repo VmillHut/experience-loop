@@ -1,0 +1,97 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 520" role="img" aria-labelledby="title desc">
+  <title id="title">同样完成任务，两种不同结果</title>
+  <desc id="desc">上方展示只把工作交给 Agent 的线性流程，下方展示 Experience Loop 如何在交付中保留判断、验收、复盘和可迁移经验。</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1200" y2="520" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#0B1220"/>
+      <stop offset="1" stop-color="#111C33"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="250" y1="300" x2="1080" y2="440" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#18B6A4"/>
+      <stop offset="1" stop-color="#6574FF"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="8" stdDeviation="12" flood-color="#020617" flood-opacity="0.35"/>
+    </filter>
+    <marker id="arrowMuted" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+      <path d="M0 0L9 4.5L0 9Z" fill="#64748B"/>
+    </marker>
+    <marker id="arrowAccent" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+      <path d="M0 0L9 4.5L0 9Z" fill="#36C6B5"/>
+    </marker>
+  </defs>
+
+  <rect x="1" y="1" width="1198" height="518" rx="30" fill="url(#bg)" stroke="#24324A" stroke-width="2"/>
+
+  <text x="56" y="64" fill="#F8FAFC" font-family="Inter, Segoe UI, Microsoft YaHei, PingFang SC, sans-serif" font-size="30" font-weight="700">同样完成任务，两种不同结果</text>
+  <text x="56" y="91" fill="#718096" font-family="Inter, Segoe UI, sans-serif" font-size="13" font-weight="600" letter-spacing="2.2">SAME TASK · DIFFERENT OUTCOME</text>
+
+  <rect x="48" y="120" width="1104" height="142" rx="22" fill="#10192B" stroke="#273449"/>
+  <rect x="68" y="139" width="122" height="34" rx="17" fill="#2B1B25" stroke="#6B3348"/>
+  <text x="129" y="162" text-anchor="middle" fill="#FDA4AF" font-family="Inter, Segoe UI, Microsoft YaHei, PingFang SC, sans-serif" font-size="15" font-weight="700">只点 Next</text>
+
+  <g font-family="Inter, Segoe UI, Microsoft YaHei, PingFang SC, sans-serif" font-size="16" font-weight="650" text-anchor="middle">
+    <rect x="220" y="158" width="140" height="66" rx="15" fill="#172033" stroke="#334155"/>
+    <text x="290" y="188" fill="#CBD5E1">提出需求</text>
+    <text x="290" y="209" fill="#64748B" font-size="11">REQUEST</text>
+    <rect x="410" y="158" width="140" height="66" rx="15" fill="#172033" stroke="#334155"/>
+    <text x="480" y="188" fill="#CBD5E1">Agent 执行</text>
+    <text x="480" y="209" fill="#64748B" font-size="11">EXECUTE</text>
+    <rect x="600" y="158" width="140" height="66" rx="15" fill="#172033" stroke="#334155"/>
+    <text x="670" y="188" fill="#CBD5E1">测试变绿</text>
+    <text x="670" y="209" fill="#64748B" font-size="11">GREEN CHECK</text>
+    <rect x="790" y="158" width="140" height="66" rx="15" fill="#172033" stroke="#334155"/>
+    <text x="860" y="188" fill="#CBD5E1">下个任务</text>
+    <text x="860" y="209" fill="#64748B" font-size="11">NEXT TASK</text>
+  </g>
+
+  <g fill="none" stroke="#64748B" stroke-width="2.5" marker-end="url(#arrowMuted)">
+    <path d="M360 191H397"/>
+    <path d="M550 191H587"/>
+    <path d="M740 191H777"/>
+  </g>
+
+  <rect x="970" y="148" width="150" height="86" rx="18" fill="#211A24" stroke="#6B3348"/>
+  <text x="1045" y="176" text-anchor="middle" fill="#F8FAFC" font-family="Inter, Segoe UI, Microsoft YaHei, PingFang SC, sans-serif" font-size="17" font-weight="700">任务交付</text>
+  <text x="1045" y="199" text-anchor="middle" fill="#FDA4AF" font-family="Inter, Segoe UI, Microsoft YaHei, PingFang SC, sans-serif" font-size="13">判断力原地不动</text>
+  <text x="1045" y="219" text-anchor="middle" fill="#9F6074" font-family="Inter, Segoe UI, sans-serif" font-size="9.5" font-weight="650">JUDGMENT UNCHANGED</text>
+  <path d="M930 191H957" fill="none" stroke="#64748B" stroke-width="2.5" marker-end="url(#arrowMuted)"/>
+
+  <rect x="48" y="282" width="1104" height="190" rx="22" fill="#0D1D2A" stroke="#24545A" filter="url(#shadow)"/>
+  <rect x="68" y="301" width="178" height="36" rx="18" fill="url(#accent)"/>
+  <text x="157" y="325" text-anchor="middle" fill="#FFFFFF" font-family="Inter, Segoe UI, sans-serif" font-size="15" font-weight="750">EXPERIENCE LOOP</text>
+
+  <g font-family="Inter, Segoe UI, Microsoft YaHei, PingFang SC, sans-serif" text-anchor="middle">
+    <rect x="190" y="354" width="145" height="72" rx="16" fill="#12303A" stroke="#2C8F86"/>
+    <text x="262.5" y="385" fill="#F8FAFC" font-size="16" font-weight="700">关键判断</text>
+    <text x="262.5" y="407" fill="#7DD3C7" font-size="12">DECIDE</text>
+
+    <rect x="375" y="354" width="145" height="72" rx="16" fill="#152B3B" stroke="#327B8E"/>
+    <text x="447.5" y="385" fill="#F8FAFC" font-size="16" font-weight="700">Agent 执行</text>
+    <text x="447.5" y="407" fill="#7DD3FC" font-size="12">EXECUTE</text>
+
+    <rect x="560" y="354" width="145" height="72" rx="16" fill="#172940" stroke="#426DA9"/>
+    <text x="632.5" y="385" fill="#F8FAFC" font-size="16" font-weight="700">证据验收</text>
+    <text x="632.5" y="407" fill="#93C5FD" font-size="12">VERIFY</text>
+
+    <rect x="745" y="354" width="145" height="72" rx="16" fill="#1B2744" stroke="#5267B6"/>
+    <text x="817.5" y="385" fill="#F8FAFC" font-size="16" font-weight="700">一句复盘</text>
+    <text x="817.5" y="407" fill="#A5B4FC" font-size="12">REFLECT</text>
+  </g>
+
+  <g fill="none" stroke="#36C6B5" stroke-width="3" marker-end="url(#arrowAccent)">
+    <path d="M335 390H362"/>
+    <path d="M520 390H547"/>
+    <path d="M705 390H732"/>
+    <path d="M890 390H920"/>
+  </g>
+
+  <rect x="933" y="340" width="187" height="100" rx="20" fill="url(#accent)"/>
+  <text x="1026.5" y="371" text-anchor="middle" fill="#FFFFFF" font-family="Inter, Segoe UI, Microsoft YaHei, PingFang SC, sans-serif" font-size="18" font-weight="750">任务交付</text>
+  <text x="1026.5" y="397" text-anchor="middle" fill="#E6FFFB" font-family="Inter, Segoe UI, Microsoft YaHei, PingFang SC, sans-serif" font-size="14" font-weight="650">+ 可迁移经验</text>
+  <text x="1026.5" y="421" text-anchor="middle" fill="#D7E0FF" font-family="Inter, Segoe UI, sans-serif" font-size="9.5" font-weight="650">DELIVERED + REUSABLE JUDGMENT</text>
+
+  <path d="M1025 446C955 485 350 488 263 438" fill="none" stroke="#36C6B5" stroke-width="2.5" stroke-dasharray="7 7" marker-end="url(#arrowAccent)" opacity="0.9"/>
+  <rect x="543" y="451" width="190" height="31" rx="15.5" fill="#132A35" stroke="#2C8F86"/>
+  <text x="638" y="472" text-anchor="middle" fill="#7DD3C7" font-family="Inter, Segoe UI, Microsoft YaHei, PingFang SC, sans-serif" font-size="13" font-weight="650">迁移到下一次真实任务</text>
+</svg>

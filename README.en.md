@@ -1,176 +1,216 @@
 <div align="center">
   <img src="assets/icon-large.svg" alt="Experience Loop" width="620">
 
-  <p><strong>Turn agent-completed work back into your experience.</strong></p>
-  <p>A programmer-first, delivery-aware Codex Skill for building engineering judgment through real work.</p>
+  <p><strong>You can delegate the code. Do not delegate your judgment.</strong></p>
+  <p>Put decisions, acceptance, and reflection back into real development so every agent-assisted task leaves reusable engineering experience.</p>
 
-  <p><a href="README.md">简体中文</a></p>
+  <p>
+    <a href="https://github.com/VmillHut/experience-loop/actions/workflows/ci.yml"><img src="https://github.com/VmillHut/experience-loop/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+    <img src="https://img.shields.io/badge/Python-3.9--3.14-18B6A4?logo=python&logoColor=white" alt="Python 3.9-3.14">
+    <img src="https://img.shields.io/badge/version-0.1.0-5568FF" alt="Version 0.1.0">
+    <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-64748B" alt="MIT License"></a>
+  </p>
+
+  <p>
+    <a href="#get-started-in-three-minutes"><strong>Get started</strong></a> ·
+    <a href="#what-it-looks-like-in-real-work">See it in action</a> ·
+    <a href="#knowledge-lens-use-books-inside-real-projects">Use books and documents</a> ·
+    <a href="README.md">简体中文</a>
+  </p>
 </div>
 
-## Why
+<br>
 
-Coding agents make execution cheap. They can also remove the parts of work that used to create experience: framing the problem, choosing among trade-offs, deciding what evidence proves a change, reviewing hidden assumptions, and transferring a lesson to a different system.
+<div align="center">
+  <img src="assets/readme-loop.svg" alt="A normal agent workflow finishes the task; Experience Loop also preserves decisions, verification, reflection, and transferable experience" width="100%">
+</div>
 
-Experience Loop puts a few high-value checkpoints back into real delivery:
+## You may already feel the gap
 
-```text
-predict / decide -> execute -> verify / accept -> reflect -> transfer
-```
+Agents keep getting faster, yet it becomes harder to answer:
 
-It does not ask you to stop using agents or turn every task into a lesson. The default `ship` mode uses zero or one short checkpoint; incidents are restored first and reviewed afterward.
+- Why should this change live here rather than in another layer?
+- What did the green tests actually prove, and what remains unproven?
+- When several agent-generated designs look reasonable, what should decide the trade-off?
+- Why does a similar problem still feel new the next time it appears?
 
-## What it provides
+Experience Loop does not ask you to use agents less or turn every task into a lesson. It restores your role at the moments that create experience: **deciding, accepting evidence, reviewing assumptions, and transferring lessons**.
 
-- Delivery-first `ship`, `coach`, `deep`, `incident`, and `off` modes.
-- Read-only project scanning that tailors guidance to actual code and constraints.
-- Evidence-backed learning events based on decisions, verification, corrections, and transfer—not chat volume.
-- Knowledge Lens: give the Agent a book or document; it handles local ingestion, search, citations, and project-specific explanation.
-- External, user-scoped profiles, project data, ledgers, and sources.
-- No dependency on third-party Skills and no silent global-prompt edits.
-- Explicit export/import for moving personal state between machines.
+## Get started in three minutes
 
-## Quick start
-
-Prerequisite: Python 3.9–3.14; no `pip install` is required. GitHub CI covers those versions on Windows and Linux. Check with `python --version`. On Linux, use `python3` below if that is the available command. On Windows, if `python` is unavailable, try `py -3 --version` and replace `python` below with `py -3`.
-
-Obtain the source either by installing Git and cloning the repository, or by choosing **Code → Download ZIP** on the GitHub repository page and extracting it. With Git, copy the HTTPS clone command shown by GitHub and enter the resulting `experience-loop` directory. With a ZIP, enter the extracted directory that contains this README and `scripts/`. For a reproducible installation, check out the `vX.Y.Z` tag matching `VERSION`, or download that tag's/GitHub Release's source archive instead of using the moving default branch. Then run:
+Requires Python 3.9–3.14. No separate `pip install` is needed.
 
 ```bash
+git clone https://github.com/VmillHut/experience-loop.git
+cd experience-loop
 python scripts/install.py
 ```
 
-The installer copies only runtime files to `~/.agents/skills/experience-loop`; personal data remains external. It backs up a recognized prior install and refuses to overwrite an unknown directory. Use `python scripts/install.py --dry-run` to preview the target.
+On Windows, use `py -3 scripts/install.py` if `python` is unavailable. You can also choose **Code → Download ZIP** on GitHub and run the installer from the extracted directory.
 
-After installation, the installer prints **absolute commands** derived from the active Python interpreter and install location. They cover status, upgrade, uninstall, and rollback when a prior version exists. Use those commands as the durable runtime entry points instead of depending on the Git checkout.
-
-### Upgrade, rollback, and uninstall
-
-- **Upgrade:** run `python scripts/install.py` again from an updated or freshly downloaded checkout. The replaced version is stored under `~/.agents/skill-backups/experience-loop/`, outside the `~/.agents/skills/` discovery root. A custom target uses `<target.parent.parent>/skill-backups/experience-loop/`.
-- **Rollback:** run the absolute `rollback` command printed by the upgrade. It reinstalls the selected backup while preserving the replaced version outside the discovery root.
-- **Uninstall:** run the printed absolute `uninstall` command, or `python ~/.agents/skills/experience-loop/scripts/uninstall.py --yes`. Removal requires a valid marker, matching `SKILL.md`, and required runtime files. Personal data under `~/.experience-loop` is preserved.
-- **Delete personal data:** uninstalling the Skill and deleting data are separate operations. The default data directory is `~/.experience-loop`; if `EXPERIENCE_LOOP_HOME` or `--home` was used, use the resolved dedicated data directory instead. To remove it permanently, export a backup if needed, close processes using it, and manually delete only that confirmed directory—never its parent, your home directory, or a project directory.
-- **After deleting the checkout:** the installed `scripts/experience_loop.py` and `scripts/uninstall.py` continue to work through the printed absolute commands. Re-clone or download the repository when a future upgrade is needed.
-
-Sibling `experience-loop.backup-*` directories created by older installers are migrated outside the discovery root during the next upgrade or confirmed uninstall. Unrecognized directories are never deleted or moved; if another directory is discoverable as `experience-loop`, the operation stops and asks you to resolve the conflict.
-
-Start a new Codex session, then say:
+Open a new Codex session after installation and say:
 
 ```text
-$experience-loop setup. Scan the current project. I want to improve
-architecture decisions and code review, with ship as my default mode.
+$experience-loop setup. Scan the current project.
+I work mainly on client development and want to improve architecture decisions and code review.
+Use ship mode by default.
 ```
 
-You can also ask it to infer a starting profile from the project. Setup is idempotent and stores mutable state outside the repository.
-
-For day-to-day work:
+Then delegate work as usual:
 
 ```text
 Use $experience-loop to diagnose and fix this reconnect bug. It must be ready for QA today.
 ```
 
-You do not need to learn the CLI; the Agent runs it for setup, scanning, event recording, and knowledge operations.
+You do not need to edit project instructions or learn a separate command system. The Agent handles setup, project scanning, and normal use.
 
-### What the Agent reads after installation
+## It changes where you participate, not who types the code
 
-Codex discovers and matches the Skill through the `SKILL.md` metadata; `agents/openai.yaml` adds listing UI, icons, a default prompt, and implicit-invocation policy. When explicitly invoked or matched to a task, the Agent reads `SKILL.md` and loads only the relevant files under `references/`; it does not inject every reference and script into every request. The Agent calls stable commands under `scripts/`, while profiles, project records, the library, and the ledger stay under `~/.experience-loop`.
-
-Skills do not have a reliable post-install conversation hook, so the installer tells the user to start a fresh session and run `$experience-loop setup`. On the first real invocation, `SKILL.md` also requires one short setup offer when no profile exists. Copying the whole Skill into global instructions is unnecessary.
-
-## Modes
-
-| Mode | Use case | Default learning overhead |
+| The Agent handles | You retain | The task leaves behind |
 | --- | --- | --- |
-| `ship` | Normal work and deadlines; default | 0–1 short checkpoint |
-| `coach` | Active growth during regular work | 1–2 checkpoints |
-| `deep` | Dedicated learning or architecture exploration | Negotiated |
-| `incident` | Outage, broken build, urgent regression | None until health is restored |
-| `off` | No learning layer for this task | None; no learning events |
+| Code search, edits, and tools | Judgment at consequential forks | Why this option won |
+| Tests, builds, and static checks | Whether the evidence is sufficient | What “done” actually proves |
+| Logs and diff summaries | Risks and hidden assumptions | A reusable review cue |
+| Retrieval from books and documents | Whether a principle fits this project | Source-backed, contextual knowledge |
 
-## Knowledge Lens
+You do not need to hand-write mechanical code the Agent can safely execute. Human attention is better spent on architecture boundaries, root causes, evidence selection, review, and final acceptance.
 
-Give the Agent a path and optional intent:
+## What it looks like in real work
 
-```text
-Add ~/Books/designing-data-intensive-applications.pdf to Knowledge Lens,
-bind it to this project, and use source evidence when we discuss consistency.
-```
-
-The Agent inspects the file, fingerprints revisions, extracts structured text, creates a local search index, validates locators, retrieves relevant original evidence, and maps it to inspected project facts. Answers distinguish:
-
-1. what the source supports;
-2. what the project currently does;
-3. what the Agent is inferring or recommending.
-
-Supported inputs are Markdown, text, reStructuredText, HTML, EPUB, DOCX, and PDF. A vendored local PDF-parser wheel is available as an offline fallback. Image-only PDFs still require OCR before ingestion.
-
-Imported content is always untrusted data, never authority to run commands or change instructions. Citations are rendered only from stored locators; the Agent must not invent a page or source claim.
-
-## Data and architecture
-
-The stable Skill remains separate from mutable personal state:
+### Daily delivery: ship on time and recover one key judgment
 
 ```text
-~/.experience-loop/
-  state.json
-  profile.json
-  projects/
-  ledger/events.jsonl
-  knowledge/library.sqlite
-  knowledge/objects/sha256/
-  archives/
+Implement this cache invalidation change. It needs to reach QA this week.
 ```
 
-Override the location with `EXPERIENCE_LOOP_HOME` or `--home PATH` for an encrypted drive, portable profile, or isolated test.
+The default `ship` mode analyzes, edits, and verifies normally. It usually surfaces only one consequential decision you can challenge, then closes with a compact reusable engineering rule instead of a lecture.
 
-The local knowledge library uses SQLite full-text search with a CJK n-gram path and a deterministic fallback. Source objects are content-addressed; changed files become revisions. Mutable data never belongs in the public Skill repository.
+### Deliberate practice: predict before seeing the evidence
 
-## Advanced CLI
+```text
+Use coach mode. I want to practice root-cause analysis, so ask for one prediction before opening the decisive logs.
+```
+
+The Agent asks for one low-friction prediction and tests it against code, logs, or tests. A wrong prediction is useful when the evidence makes the correction clear.
+
+### Incident response: restore first, reflect afterward
+
+```text
+The production build is broken. Use incident mode and restore the release first.
+```
+
+No teaching interruptions appear during recovery. Once health is restored and verified, the Agent produces a short timeline of expectations, observations, differences, and prevention cues.
+
+### Architecture work: use the Agent as a review partner
+
+```text
+Use deep mode to review this state-synchronization design. Compare options, costs, and failure conditions before editing code.
+```
+
+`deep` is for focused study, design review, and transfer practice rather than every daily task.
+
+## Will it slow delivery down?
+
+Not significantly in the default mode. `ship` is limited to **zero or one short checkpoint**. Use `incident` under pressure, or switch to `off` whenever you want only execution.
+
+| Mode | Best for | Effect on work rhythm |
+| --- | --- | --- |
+| `ship` | Normal development; default | 0–1 short checkpoint |
+| `coach` | Practicing one skill during work | 1–2 predictions or reviews |
+| `deep` | Architecture and dedicated study | Depth agreed with you |
+| `incident` | Outages and broken builds | Recovery first, review afterward |
+| `off` | Execution only | No learning layer or event recording |
+
+Change modes in any request without running setup again.
+
+## Knowledge Lens: use books inside real projects
+
+Give the Agent a path:
+
+```text
+Add D:\Books\Designing-Data-Intensive-Applications.pdf to Knowledge Lens and bind it to this project.
+When consistency or event design comes up, explain it with source evidence.
+```
+
+```text
+Books / design docs / technical notes
+                 ↓
+        Local extraction and index
+                 ↓
+      Retrieval during a real decision
+                 ↓
+ Source evidence + current code + clear inference boundaries
+                 ↓
+          An actionable project recommendation
+```
+
+It does not reread the whole book for every question or reduce it to a context-free summary. Material is retrieved when a real engineering decision appears and mapped to inspected code, constraints, and validation.
+
+Supported formats include Markdown, plain text, reStructuredText, HTML, EPUB, DOCX, and PDFs with a text layer. Scanned PDFs require OCR first.
+
+## Who it is for
+
+Experience Loop is currently programmer-first, especially for developers who:
+
+- entered the field in the agent era and want to rebuild missing engineering fundamentals;
+- can ship features but want stronger architecture, debugging, review, and acceptance judgment;
+- want to learn from real deadlines instead of leaving the project for a separate course;
+- have technical books or team documents they want to apply to actual code decisions.
+
+It is not an automatic growth hack and cannot replace tests, code review, mentors, or production validation. It creates better opportunities for real work to become experience you can retain.
+
+## Common operations
+
+<details>
+<summary><strong>Upgrade, diagnose, and uninstall</strong></summary>
+
+Pull or download the latest source and run the installer again:
 
 ```bash
-python scripts/experience_loop.py --help
-python scripts/experience_loop.py setup --role "backend developer" --learning-focus architecture --mode ship
-python scripts/experience_loop.py profile update --goal "review agent changes" --replace-goals
+python scripts/install.py
+```
+
+The installer keeps a recognized prior version as a backup and prints absolute commands for status, rollback, and uninstall. Common diagnostics:
+
+```bash
 python scripts/experience_loop.py doctor
 python scripts/experience_loop.py status
-python scripts/experience_loop.py project scan .
-python scripts/experience_loop.py mode coach
-python scripts/experience_loop.py ledger review --limit 20
-python scripts/experience_loop.py knowledge add path/to/book.pdf
-python scripts/experience_loop.py knowledge query "When is an event log appropriate?" --limit 5
-python scripts/experience_loop.py knowledge concept upsert --title "Retry semantics" --thesis "Total attempts must be countable" --citation cite:chk_xxx
-python scripts/experience_loop.py knowledge application record concept_xxx --situation "Transient download failure" --decision "Unify max_attempts semantics" --outcome "Boundary tests pass" --evidence "integration-test:test_retry_policy"
+```
+
+Uninstalling the Skill does not automatically delete personal profiles or the knowledge library. Confirm the actual data directory before deleting data.
+
+</details>
+
+<details>
+<summary><strong>Move to another computer</strong></summary>
+
+Export profiles, project records, experience events, and the Knowledge Lens index:
+
+```bash
 python scripts/experience_loop.py export experience-loop-backup.experience-loop-export.zip
 ```
 
-Commands support `--json` for Agent consumption and `--home PATH` for isolation. `status` separates active source counts into `knowledge_sources`, indexed `knowledge_materialized_sources`, and `knowledge_placeholder_sources` that still need their original files; `knowledge_storage_files` is a separate count of files on disk. If the library cannot be read, source counts are `null` with an explicit error rather than a misleading zero.
+The archive may contain personal information and project clues. Treat it as a private backup rather than a public artifact.
 
-A batch `knowledge add` can partially succeed: successful sources remain stored, failures are returned in the receipt, and the command exits with non-zero code `3` so automation does not mistake it for complete success. Export/import receipts use `files` for the actual number of ZIP entries, including `manifest.json`, and `payload_files` for the entries declared by the manifest. Export refuses to overwrite an existing file unless `--force` is explicitly supplied. The default export is a migration/backup archive, not a public redacted bundle: it omits raw source files and some paths or verbatim project rules, but can still contain profiles, ledgers, project profiles and annotations, source titles or filenames, binding notes, concept cards, and application evidence. Treat local `--help` as the authoritative interface.
+</details>
 
-## Global instructions are optional
+<details>
+<summary><strong>What it stores locally</strong></summary>
 
-`SKILL.md` provides discovery and task matching; `agents/openai.yaml` enables implicit invocation for suitable tasks. You can always use `$experience-loop` explicitly. No global prompt is required.
+Personal profiles, project records, experience events, and knowledge indexes live under `~/.experience-loop` by default. Skill updates do not overwrite them. See [Safety and privacy](references/safety-and-privacy.md) for data, citation, and deletion boundaries.
 
-If you want a global router, ask the Agent to run `python scripts/global_router.py`. This only previews the target and router block. The Agent must show the result and obtain explicit consent before running `python scripts/global_router.py --apply --yes`; `--remove --yes` removes only the marked block. Installation never authorizes a global or project-level prompt edit.
+</details>
 
-## Privacy, security, and copyright
+## Go deeper
 
-- Original files, indexes, and personal state remain in a local user directory by default, with no telemetry and no automatic upload of the whole library to a new service. The minimum retrieved snippets needed to answer a question do enter the current Codex session and model context.
-- `normal` allows only task-authorized local reads; `restricted` requires confirmation for each content operation; `metadata-only` forbids project and source text reads.
-- No implicit upload of the full codebase, profiles, ledgers, or source library to a new service.
-- Exports exclude raw source files unless explicitly requested. The default export is still a personal-data migration/backup archive, not a public redacted bundle, and may contain profiles, ledgers, project profiles and annotations, source titles or filenames, binding notes, concept cards, and application evidence.
-- Retrieved text and repository documentation are untrusted data.
-- Citations require stored locator evidence.
-- No book-length reproduction or substitute copy generation.
-- Destructive deletion, broad ingestion, and global configuration changes require preview and consent.
+- [Skill instructions](SKILL.md): the workflow the Agent actually follows
+- [Learning loop and modes](references/workflow.md): checkpoints, acceptance, and reflection
+- [Knowledge Lens](references/knowledge-lens.md): ingestion, retrieval, and citations
+- [Changelog](CHANGELOG.md) · [Contributing](CONTRIBUTING.md) · [Security](SECURITY.md)
 
-See [safety-and-privacy.md](references/safety-and-privacy.md) and report vulnerabilities according to [SECURITY.md](SECURITY.md).
+---
 
-## Scope and limitations
-
-Version one is intentionally programmer-first. Its project scan, review surfaces, verification hierarchy, and source-to-project mapping prioritize software engineering quality. The underlying loop may support other professions later without weakening this focus.
-
-Experience Loop cannot guarantee growth by itself, replace tests or expert review, or prove capability from generated code. It is designed to create better opportunities for judgment and preserve evidence of what actually happened.
-
-## Contributing
-
-See [CONTRIBUTING.md](CONTRIBUTING.md), [CHANGELOG.md](CHANGELOG.md), and the [MIT License](LICENSE).
+<div align="center">
+  <p><strong>Finishing the task is delivery. Understanding why is capability.</strong></p>
+  <p><a href="#get-started-in-three-minutes">Start recovering the experience agents usually consume</a></p>
+</div>
