@@ -20,10 +20,46 @@ class RepositoryContractTests(unittest.TestCase):
         description = match.group(1).strip()
         self.assertGreater(len(description), 60)
         self.assertIn("when", description.lower())
-        self.assertLessEqual(len(skill.splitlines()), 500)
+        self.assertLessEqual(len(skill.splitlines()), 160)
+        self.assertLessEqual(len(skill), 15000)
         self.assertIn("| `auto` |", skill)
         self.assertIn("| `focus` |", skill)
+        self.assertIn("| `deep` |", skill)
         self.assertIn("| `off` |", skill)
+        mode_rows = {
+            mode: next(
+                line
+                for line in skill.splitlines()
+                if line.startswith("| `{0}` |".format(mode))
+            )
+            for mode in ("auto", "focus", "deep", "off")
+        }
+        self.assertIn("silence, embedded guidance", mode_rows["auto"])
+        self.assertIn("Intensity rises", mode_rows["auto"])
+        self.assertIn("never silently becomes `deep`", mode_rows["auto"])
+        self.assertIn("no content-bearing profile use", mode_rows["off"])
+        self.assertIn("learning references, checkpoints", mode_rows["off"])
+        self.assertIn("learning summaries, or ledger writes", mode_rows["off"])
+        self.assertIn("minimal mode/privacy control read", mode_rows["off"])
+        self.assertIn("honor a previously saved `off`", mode_rows["off"])
+        self.assertIn("`auto` is not a synonym for low intervention", skill)
+        self.assertIn(
+            "Let one selected capability limit only learning intervention and ledger labeling.",
+            skill,
+        )
+        self.assertIn(
+            "It must never limit the engineering concerns inspected.", skill
+        )
+        self.assertIn("## Resolve only state that changes the task", skill)
+        self.assertIn("Do not run `status` or `doctor` routinely", skill)
+        self.assertIn(
+            "Load a saved profile only when it is customized and can change", skill
+        )
+        self.assertIn(
+            "Never consume content-bearing profile fields on the fast path or in `off`.",
+            skill,
+        )
+        self.assertIn("Ordinary `auto` work should not need it.", skill)
         self.assertIn("references/capability-compass.md", skill)
         self.assertTrue((ROOT / "references" / "capability-compass.md").is_file())
 

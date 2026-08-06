@@ -4,9 +4,11 @@ Use this reference whenever importing, querying, citing, updating, exporting, or
 
 ## User contract
 
-The user supplies a file or directory and may add an intent or privacy boundary. The Agent handles format inspection, ingestion, indexing, retrieval, source validation, and project-specific explanation.
+The user supplies a file or directory and may add an intent or privacy boundary. For one-off use, inspect only the relevant material without creating a persistent index. When reuse, precise citation, or cross-task retrieval justifies persistence, the Agent handles format inspection, ingestion, indexing, retrieval, source validation, and project-specific explanation.
 
 Do not require the user to preprocess a book, invent tags, split chapters, design prompts, choose chunk sizes, or understand retrieval systems.
+
+Knowledge Lens currently accepts supported document formats such as Markdown, plain text, reStructuredText, HTML, EPUB, DOCX, and PDF. Treat CSV, JSON, spreadsheets, and other structured datasets as one-off data-analysis inputs unless a future runtime extractor explicitly supports them; do not imply successful indexing for an unsupported format.
 
 ## Knowledge layers
 

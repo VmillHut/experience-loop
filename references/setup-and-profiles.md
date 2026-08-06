@@ -17,7 +17,7 @@ Use this reference for first-run onboarding, workspace discovery, external state
 
 ## Setup goals
 
-Complete setup without making the user design a curriculum or choose among fine-grained modes. A valid first run can contain no profile answers at all: initialize external state, use `auto`, and scan the task-authorized project when one is available.
+Avoid making setup a prerequisite for delivery. A valid first run can contain no profile answers and no persisted state at all: resolve to `auto`, finish the task, and create external state only when the user asks to remember something or a reusable artifact clearly justifies persistence.
 
 Gather only information that materially changes behavior:
 
@@ -25,25 +25,25 @@ Gather only information that materially changes behavior:
 2. Near-term responsibility or one growth direction, when the user volunteers it or the task requires prioritization.
 3. A non-default privacy boundary before content-bearing operations.
 
-Infer role, experience, likely learning opportunities, and interruption tolerance gradually from real work. Treat them as hypotheses, not required onboarding fields. Accept “scan this project and infer it” as a complete answer. Ask one compact question only when ambiguity changes what the Skill will do.
+Infer role, experience, likely learning opportunities, and interruption tolerance gradually from real work. Treat them as hypotheses, not required onboarding fields. Accept “scan this project and infer it” as a complete answer when the user actually wants a reusable project profile. Ask one compact question only when ambiguity changes what the Skill will do.
 
 ## First-run sequence
 
-1. Run the runtime's `doctor` or status command.
-2. If required local directories or metadata are missing, run setup.
-3. Show the proposed external data location.
-4. Save the default versioned personal profile with `auto` mode; do not require customization.
-5. Scan the supplied or current project when authorized, then save a separate project profile.
-6. Save user-provided role, goals, or learning directions without asking for missing optional fields.
-7. Mention `focus` and `off` only if the user needs different behavior; do not present a setup menu.
-8. Offer, but do not require, a global Agent router.
-9. Run doctor again and report readiness plus any optional capability limits.
+1. Start the requested task immediately; setup is not an onboarding gate.
+2. When control state is not already known, use the lightweight `mode` command. It returns default `auto` before setup without creating files.
+3. Initialize only when the user saves a mode, profile, project profile, ledger event, or Knowledge Lens source.
+4. On the first write, show the resolved external data location and save a versioned profile without requiring optional answers.
+5. Save only volunteered role, responsibilities, domains, goals, learning directions, explanation preference, delivery context, or privacy boundaries.
+6. Scan a project only when the user requests a reusable profile or repeated work makes persistence clearly worthwhile.
+7. Explain `focus`, `deep`, or `off` only when the user asks for different behavior; do not present a setup menu.
+8. Offer the global Agent router only to users who want implicit activation across projects.
+9. Run `doctor` only for an actual runtime concern, repair, or explicit request.
 
 Setup is idempotent. Re-running it must preserve existing data unless the user explicitly confirms reset or replacement.
 
 Interpret runtime status fields literally: `knowledge_sources` counts active logical sources, `knowledge_materialized_sources` counts sources with a local indexed revision, `knowledge_placeholder_sources` counts portable records waiting for their original file, and `knowledge_storage_files` counts physical files under Knowledge Lens storage. If source metadata cannot be read, the source counts are `null` with an explicit status/error; do not reinterpret them as zero.
 
-Use `profile show` to inspect the current profile and `profile update` to append, replace, or clear goals and learning directions only when the user's responsibilities materially change. Do not edit `profile.json` by hand during normal use.
+Use `profile show` only when the lightweight mode result says a customized profile exists and its fields can affect this task. Use `profile update` to append, replace, or clear the fields actually changed by the user's natural-language statement. Do not edit `profile.json` by hand during normal use.
 
 ## External state
 
@@ -76,12 +76,11 @@ Do not assume every runtime version uses exactly these filenames. Use its comman
 Record stable preferences, not a personality verdict. Useful fields include:
 
 - role and experience range;
-- delivery context;
-- active learning directions;
-- default mode (`auto`, `focus`, or `off`);
-- explanation style;
-- current hypotheses about strengths and gaps;
-- consent settings and schema version.
+- responsibilities and technical or business domains;
+- near-term goals and active learning directions;
+- explanation style and delivery context;
+- default mode (`auto`, `focus`, `deep`, or `off`);
+- privacy boundary and schema version.
 
 Treat inferred strengths and gaps as hypotheses with confidence, evidence references, and last-updated timestamps. Never label the user from a single task.
 
@@ -102,9 +101,10 @@ Keep advanced capability available through progressively disclosed inputs:
 | User provides | Agent handles | Do not require |
 | --- | --- | --- |
 | nothing beyond the task | default `auto`, task framing, adaptive control | setup questionnaire or mode choice |
-| one sentence about role, responsibility, goal, or preferred explanation | update only the relevant profile fields | a complete personal profile |
-| current project path | read-only scan, project identity, commands, boundaries, learning opportunities | manual project metadata |
-| article, book, notes, data, or document path plus optional intent | Knowledge Lens ingestion, citation index, binding, and later retrieval | tags, chunk settings, or a folder taxonomy |
+| one sentence about role, responsibility, domain, goal, preferred explanation, or delivery context | update only the relevant profile fields | a complete personal profile |
+| current project path plus a request to remember it | read-only scan, project identity, commands, boundaries, learning opportunities | manual project metadata |
+| article, book, notes, or supported document path plus optional intent | one-off reading or, when reuse justifies it, Knowledge Lens ingestion, citation index, binding, and later retrieval | tags, chunk settings, or a folder taxonomy |
+| CSV, JSON, table, or another structured dataset | one-off analysis with the appropriate data tool; persist only through a format the runtime actually supports | pretending every dataset is a Knowledge Lens source |
 | exemplar project path plus a comparison question | separate read-only project scan and targeted mechanism comparison | copying the whole repository or treating it as authority |
 
 Prefer passive refinement from real tasks over repeated preference prompts. Surface an inferred preference or gap only when it changes behavior, has evidence from more than one event, or needs correction.
@@ -130,17 +130,20 @@ Refresh stale or contradicted fields from current source. Project profiles are n
 
 ## Mode and adaptive interruption
 
-Store a default, but select per task. A reasonable initial budget is:
+Let current task evidence control the behavior. Treat natural-language `focus` or `deep` requests as task-scoped unless the user explicitly asks to save that mode as the default:
 
-- `auto`: zero required learning questions and at most one optional checkpoint;
-- `focus`: one or two purposeful checkpoints, with open-ended depth only when requested;
-- `off`: no learning behavior or ledger writes.
+- `auto`: intelligently choose silence, embedded guidance, one checkpoint, or at most two short checkpoints from expected benefit versus interruption cost;
+- `focus`: the user explicitly locks one capability goal for the task, normally with one or two purposeful checkpoints;
+- `deep`: the user explicitly requests maximum useful depth, normally with two to four purposeful checkpoints, mental models, alternatives, failure cases, evidence, and transfer;
+- `off`: no content-bearing profile use, learning behavior, learning tail, or ledger writes.
 
-Within `auto`, infer pressure, consequence, uncertainty, and growth value. Suppress learning interruptions during a deadline, outage, failing release, or explicit “just fix it” request. Increase verification and cognitive coverage for high-consequence work without turning that rigor into more questions.
+Within `auto`, infer pressure, consequence, uncertainty, reuse potential, profile relevance, prior skipped guidance, and interaction cost. Do not equate auto with low intervention: choose the smallest intervention that has a concrete path to positive net value, and choose silence when none does. Never upgrade to `deep` implicitly.
 
-Even in `focus`, urgent recovery takes precedence; return to deliberate practice only after health is restored. Do not ask the user to switch modes for a condition the Agent can detect.
+An explicitly saved `focus` or `deep` default remains a continuing user choice until changed; it is not inferred from complexity. Do not persist a one-off mode request silently.
 
-Normalize legacy settings without manual migration: `ship` and `incident` become `auto`; `coach` and `deep` become `focus`. Keep accepting old command names for compatibility, but show only the three current modes in help and onboarding.
+Even in `focus` or `deep`, urgent recovery takes precedence; return to deliberate practice only after health is restored. Do not ask the user to switch modes for a condition the Agent can detect.
+
+Normalize legacy settings without manual migration: `ship` and `incident` become `auto`, and `coach` becomes `focus`. `deep` remains a first-class current mode. Keep accepting old command names for compatibility, but show only the four current modes in help and onboarding.
 
 ## Optional global Agent router
 
@@ -158,7 +161,7 @@ Before writing:
 Keep the router short and avoid copying this Skill into the global prompt. A suitable intent is:
 
 ```text
-Use $experience-loop for substantive programming work when it can preserve delivery speed while improving engineering judgment. Default to auto behavior, adapt silently to urgency and risk, honor “off” or “just do it,” and never require project-level installation.
+Use $experience-loop for substantive programming work when it can improve engineering judgment without lowering task quality. In auto, intelligently choose whether and how strongly to guide from net user value; honor “off,” “delivery only,” and urgent recovery immediately, and never activate deep implicitly.
 ```
 
 Do not write a project-level router unless the user explicitly asks for team-wide behavior.

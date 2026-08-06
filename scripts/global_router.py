@@ -17,12 +17,16 @@ import tempfile
 START = "<!-- experience-loop:router:start -->"
 END = "<!-- experience-loop:router:end -->"
 ROUTER = f"""{START}
-For software-development work, apply `$experience-loop` as a delivery-first
-learning layer when requirements, architecture, debugging, review, testing, or
-acceptance contain a meaningful judgment opportunity. Default to `auto` mode:
-adapt silently to urgency, consequence, uncertainty, and learning value; require
-no learning answer, verify the result, and keep any retrospective short. Respect
-"delivery only" and `off` immediately.
+For substantive software-development work, apply `$experience-loop` when a
+reusable human judgment may justify the interaction cost. Resolve an explicitly
+saved mode; otherwise implicit use starts in `auto` and chooses silence,
+embedded guidance, one checkpoint, or at most two short checkpoints from
+consequence, uncertainty, transfer value, user profile, time pressure, and
+interaction cost. Do not invoke it for mechanical or simple factual work, an
+explicit "delivery only" request, or `off`. During urgent recovery, use the
+normal delivery fast path without learning interruptions. Never infer `focus`
+or `deep` from complexity. One learning seam must not narrow engineering or
+verification coverage.
 {END}
 """
 

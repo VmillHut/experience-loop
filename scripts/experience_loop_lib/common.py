@@ -27,11 +27,10 @@ EXIT_CORRUPT = 6
 EXIT_IO = 7
 EXIT_UNEXPECTED = 10
 
-MODES = ("auto", "focus", "off")
+MODES = ("auto", "focus", "deep", "off")
 LEGACY_MODE_ALIASES = {
     "ship": "auto",
     "coach": "focus",
-    "deep": "focus",
     "incident": "auto",
 }
 CAPABILITIES = (
@@ -65,12 +64,12 @@ class DependencyError(ExperienceLoopError):
 
 
 def normalize_mode(value: str) -> str:
-    """Return one of the three user-facing modes, accepting legacy aliases."""
+    """Return a current user-facing mode, accepting legacy aliases."""
     cleaned = str(value).strip().lower()
     normalized = LEGACY_MODE_ALIASES.get(cleaned, cleaned)
     if normalized not in MODES:
         raise ExperienceLoopError(
-            "未知模式：%s。可用模式为 auto、focus、off。" % value
+            "未知模式：%s。可用模式为 auto、focus、deep、off。" % value
         )
     return normalized
 

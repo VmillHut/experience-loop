@@ -28,7 +28,15 @@ from .common import (
     normalize_mode,
 )
 from .ledger import INDEPENDENCE_LEVELS, KINDS, load_events, record_event, review_events
-from .profile import PRIVACY_LEVELS, configure_profile, load_profile, set_mode, validate_profile
+from .profile import (
+    PRIVACY_LEVELS,
+    configure_profile,
+    default_profile,
+    load_profile,
+    load_profile_controls,
+    set_mode,
+    validate_profile,
+)
 from .project import (
     DEFAULT_MAX_FILE_BYTES,
     DEFAULT_MAX_FILES,
@@ -97,10 +105,14 @@ def _parser() -> argparse.ArgumentParser:
     setup.add_argument("--name")
     setup.add_argument("--role")
     setup.add_argument("--experience-level", help="经验阶段，例如 junior、1-3 years 或 senior")
+    setup.add_argument("--responsibility", action="append", default=[])
+    setup.add_argument("--domain", action="append", default=[])
     setup.add_argument("--goal", action="append", default=[])
     setup.add_argument("--learning-focus", action="append", default=[])
+    setup.add_argument("--explanation-style")
+    setup.add_argument("--delivery-context")
     setup.add_argument(
-        "--mode", type=_mode_value, metavar="{auto,focus,off}", default=None
+        "--mode", type=_mode_value, metavar="{auto,focus,deep,off}", default=None
     )
     setup.add_argument("--privacy", choices=PRIVACY_LEVELS, default=None)
     setup.add_argument("--project", help="初始化后立即只读扫描的主项目目录")
@@ -121,14 +133,24 @@ def _parser() -> argparse.ArgumentParser:
     profile_update.add_argument("--reset-role", action="store_true")
     profile_update.add_argument("--experience-level")
     profile_update.add_argument("--clear-experience-level", action="store_true")
+    profile_update.add_argument("--responsibility", action="append")
+    profile_update.add_argument("--replace-responsibilities", action="store_true")
+    profile_update.add_argument("--clear-responsibilities", action="store_true")
+    profile_update.add_argument("--domain", action="append")
+    profile_update.add_argument("--replace-domains", action="store_true")
+    profile_update.add_argument("--clear-domains", action="store_true")
     profile_update.add_argument("--goal", action="append")
     profile_update.add_argument("--replace-goals", action="store_true")
     profile_update.add_argument("--clear-goals", action="store_true")
     profile_update.add_argument("--learning-focus", action="append")
     profile_update.add_argument("--replace-learning-focus", action="store_true")
     profile_update.add_argument("--clear-learning-focus", action="store_true")
+    profile_update.add_argument("--explanation-style")
+    profile_update.add_argument("--clear-explanation-style", action="store_true")
+    profile_update.add_argument("--delivery-context")
+    profile_update.add_argument("--clear-delivery-context", action="store_true")
     profile_update.add_argument(
-        "--mode", type=_mode_value, metavar="{auto,focus,off}"
+        "--mode", type=_mode_value, metavar="{auto,focus,deep,off}"
     )
     profile_update.add_argument("--privacy", choices=PRIVACY_LEVELS)
     doctor = commands.add_parser("doctor", help="检查运行环境和数据完整性")
@@ -136,7 +158,9 @@ def _parser() -> argparse.ArgumentParser:
     doctor.add_argument("--deep", action="store_true", help="额外校验每个当前资料对象的 SHA-256")
 
     mode = commands.add_parser("mode", help="查看或切换工作模式")
-    mode.add_argument("value", nargs="?", type=_mode_value, metavar="{auto,focus,off}")
+    mode.add_argument(
+        "value", nargs="?", type=_mode_value, metavar="{auto,focus,deep,off}"
+    )
 
     project = commands.add_parser("project", help="管理项目画像")
     project_commands = project.add_subparsers(dest="project_command", required=True)
@@ -627,8 +651,12 @@ def _dispatch(namespace: argparse.Namespace, store: Store) -> Dict[str, Any]:
             name=namespace.name,
             role=namespace.role,
             experience_level=namespace.experience_level,
+            responsibilities=namespace.responsibility,
+            domains=namespace.domain,
             goals=namespace.goal,
             learning_focus=namespace.learning_focus,
+            explanation_style=namespace.explanation_style,
+            delivery_context=namespace.delivery_context,
             mode=namespace.mode,
             privacy=namespace.privacy,
         )
@@ -661,12 +689,22 @@ def _dispatch(namespace: argparse.Namespace, store: Store) -> Dict[str, Any]:
             reset_role=namespace.reset_role,
             experience_level=namespace.experience_level,
             clear_experience_level=namespace.clear_experience_level,
+            responsibilities=namespace.responsibility,
+            replace_responsibilities=namespace.replace_responsibilities,
+            clear_responsibilities=namespace.clear_responsibilities,
+            domains=namespace.domain,
+            replace_domains=namespace.replace_domains,
+            clear_domains=namespace.clear_domains,
             goals=namespace.goal,
             replace_goals=namespace.replace_goals,
             clear_goals=namespace.clear_goals,
             learning_focus=namespace.learning_focus,
             replace_learning_focus=namespace.replace_learning_focus,
             clear_learning_focus=namespace.clear_learning_focus,
+            explanation_style=namespace.explanation_style,
+            clear_explanation_style=namespace.clear_explanation_style,
+            delivery_context=namespace.delivery_context,
+            clear_delivery_context=namespace.clear_delivery_context,
             mode=namespace.mode,
             privacy=namespace.privacy,
         )
@@ -674,11 +712,23 @@ def _dispatch(namespace: argparse.Namespace, store: Store) -> Dict[str, Any]:
     if command == "doctor":
         return _doctor(store, namespace.repair, namespace.deep)
     if command == "mode":
-        store.require_initialized()
-        profile = load_profile(store) if namespace.value is None else set_mode(store, namespace.value)
+        if namespace.value is None and not store.is_initialized():
+            profile = default_profile()
+            persisted = False
+        elif namespace.value is not None:
+            profile = set_mode(store, namespace.value)
+            persisted = True
+        else:
+            store.require_initialized()
+            profile = load_profile_controls(store)
+            persisted = True
         return {
             "mode": profile["mode"],
             "records_learning_events": profile["mode"] != "off",
+            "profile_customized": bool(profile.get("customized")),
+            "privacy": profile.get("privacy", "normal"),
+            "persisted": persisted,
+            "home": str(store.home),
             "message": "当前模式：%s" % profile["mode"],
         }
     if command == "project":

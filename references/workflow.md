@@ -6,7 +6,9 @@ Use this reference to control intervention cost, choose checkpoints, calibrate d
 
 - [What the loop optimizes](#what-the-loop-optimizes)
 - [Adaptive controller](#adaptive-controller)
+- [Fast path](#fast-path)
 - [Mode recipes](#mode-recipes)
+- [Low-cost extensions](#low-cost-extensions)
 - [Calibrate delegation](#calibrate-delegation)
 - [Choose one high-leverage target](#choose-one-high-leverage-target)
 - [Prediction and decision checkpoints](#prediction-and-decision-checkpoints)
@@ -34,10 +36,12 @@ Infer these signals from the request and visible evidence. Do not ask the user t
 
 | Signal | Evidence | Effect |
 | --- | --- | --- |
-| Pressure | outage, broken release, explicit deadline, “just fix it” | suppress learning interruptions; recover first |
+| Time pressure | outage, broken release, explicit deadline, “just fix it” | suppress learning interruptions; recover first |
 | Consequence | security, data, compatibility, migration, production, irreversibility | increase verification, review, rollback, and acceptance rigor |
 | Uncertainty | ambiguous outcome, unfamiliar boundary, competing causes, weak tests | inspect first; ask one blocking question only if the answer changes the deliverable |
-| Growth value | recurring responsibility, transferable mechanism, weak prior evidence | spend one checkpoint when pressure allows |
+| Transfer value | recurring responsibility, reusable mechanism, weak prior evidence | increase the potential benefit of a learning intervention |
+| Profile relevance | explicit goal, current responsibility or domain, repeated verified evidence | prefer the learning seam that compounds the user's real work; never narrow engineering coverage |
+| Interaction cost | context switching, user waiting, long explanation, repeated questions | prefer silence or embedded guidance when interruption cost outweighs future value |
 
 Apply this decision order:
 
@@ -45,39 +49,81 @@ Apply this decision order:
 2. Restore health or protect the deadline.
 3. Match verification depth to consequence and failure mode.
 4. Resolve material ambiguity.
-5. Use remaining attention for one reusable judgment.
-6. Stay silent when no durable value remains.
+5. Estimate the net user value of silence, embedded guidance, or a checkpoint from all six signals.
+6. Use at most one learning seam without limiting the engineering concerns inspected.
+7. Stay silent when no durable value remains, and never infer `deep` from a high score or high-risk task.
 
 Recalculate after new evidence. A failed test may raise uncertainty or consequence; a successful minimal reproduction may lower both. Do not lock the task into its opening behavior.
+
+## Fast path
+
+Use the fast path before loading content-bearing learning state or references when the work is mechanical, obvious, low-transfer, a simple factual answer, an explicit “delivery only” request, or urgent recovery. A minimal control-plane mode/privacy read may happen first solely to honor persisted settings.
+
+- Execute and verify with normal engineering rigor. Fast path means no learning ceremony, not lower task quality.
+- Do not run setup, profile, project-scan, Knowledge Lens, or ledger operations merely to create a learning opportunity.
+- For `off` or an explicit “delivery only” request, do not add a later lesson, retrospective, transfer cue, or learning event.
+- During an outage, broken release, or urgent regression, restore and verify first. Resume an explicitly requested `focus` or `deep` session only after health returns; never resume it when the user chose `off` or delivery only.
 
 ## Mode recipes
 
 ### Auto
 
-1. State the outcome and acceptance evidence.
-2. Inspect, decide, and execute normally.
-3. Surface at most one consequential recommendation for optional challenge.
+`auto` is the default when no explicit current-task or saved mode exists, and the only mode the Agent may infer. It is an expected-net-value controller, not a synonym for low intervention.
+
+1. State the outcome and acceptance evidence, then inspect and execute normally.
+2. Weigh consequence, uncertainty, transfer value, profile relevance, time pressure, and interaction cost.
+3. Choose one of four intervention levels:
+   - **silent** — no learning addition;
+   - **embedded** — explain one useful mechanism or evidence boundary without interrupting;
+   - **one checkpoint** — invite one skippable prediction, trade-off, or acceptance judgment;
+   - **two short checkpoints** — use only when the opportunity is unusually valuable, pressure is low, and the extra interruption clearly pays for itself.
 4. Validate with risk-appropriate evidence and preserve cognitive coverage.
 5. End with at most one reusable cue when one truly emerged.
 
-Require zero learning answers. Target overhead: seconds, not minutes.
+Require zero learning answers and proceed immediately if a checkpoint is skipped. `auto` may strengthen verification or review for consequential work, but it must never silently become `focus` or `deep`.
 
 ### Focus
 
-1. Establish one capability goal tied to the deliverable.
+`focus` begins only when the user explicitly locks one capability goal for the task or has explicitly saved `focus` as the default. A one-off request is task-scoped unless the user asks to persist it.
+
+1. Establish that goal and tie it to the deliverable.
 2. Invite one prediction, trade-off, or acceptance judgment.
 3. Execute and verify rather than pausing for a lecture.
 4. Compare the user's model with evidence.
 5. Use one review seam or small variation to strengthen transfer.
 6. Run a proportionate After Action Review.
 
-Use no more than two purposeful checkpoints unless the user explicitly requests an open-ended study session. If urgency appears, temporarily behave like `auto` recovery and return to focus only after stability.
+Use one or two purposeful checkpoints. If the user wants full-depth exploration rather than a locked, bounded goal, use explicit `deep`. If urgency appears, take the fast path and return to focus only after stability.
+
+### Deep
+
+`deep` begins only when the user explicitly requests maximum learning depth, a deep design or debugging session, or a substantial growth review, or has explicitly saved `deep` as the default. Never infer it from task complexity; do not persist a one-off request silently.
+
+1. Establish the deliverable and the mental model or capability question to resolve.
+2. Elicit the user's current model, credible alternatives, and expected evidence without hiding information needed for safe delivery.
+3. Inspect the project and relevant sources, data, or exemplar mechanisms when the request authorizes them.
+4. Use usually two to four purposeful checkpoints at genuine decision seams.
+5. Execute or test the hypothesis with the same or stronger task-quality floor as every other mode.
+6. Compare predictions with evidence, analyze failure conditions, and run a full but relevant After Action Review.
+7. Create one realistic transfer variation when it adds value.
+
+Full intensity is positive, not punitive: never force manual coding, manufacture struggle, withhold decisive answers, or trade correctness, verification, safety, or useful Agent work for pedagogy. If urgency appears, take the fast path and resume only after health returns.
 
 ### Off
 
-Execute the request normally. Do not add checkpoints, teaching sections, ledger events, reminders, or source-based lessons unless the user explicitly asks for them.
+Execute the request normally. Apart from a minimal control-plane read needed to honor a saved `off`, do not consume learning-profile context, add checkpoints, teaching sections, learning summaries, ledger events, reminders, or an after-the-fact learning tail. A source, structured-data, or exemplar-project operation the user explicitly requested remains part of the task and should still run without a learning overlay.
 
-Accept legacy mode names for compatibility, but never make the user learn them: `ship` and `incident` map to `auto`; `coach` and `deep` map to `focus`.
+Accept legacy mode names for compatibility, but never make the user learn them: `ship` and `incident` map to `auto`; `coach` maps to `focus`; `deep` is a first-class current mode.
+
+## Low-cost extensions
+
+Keep these capabilities orthogonal to mode and load them only when the current request benefits:
+
+- **Articles, books, and documents** — inspect only relevant material for one-off use; ingest into Knowledge Lens when reuse, precise citation, or cross-task retrieval justifies persistence.
+- **Structured data** — analyze CSV, JSON, tables, logs, or similar data directly for the current question. Do not imply that every data format belongs in Knowledge Lens.
+- **High-quality or exemplar projects** — require a path and one comparison question, inspect read-only and only along relevant paths, keep the project separate from the active workspace, and compare mechanisms and evidence instead of copying patterns blindly.
+
+No mode should ingest a source or scan an exemplar merely because a path was mentioned. `focus` and `deep` may use these extensions more deeply when explicitly requested; `off` still honors an explicit analysis request without adding a learning layer.
 
 ## Calibrate delegation
 
@@ -95,7 +141,7 @@ After the task, compare expected leverage with net result: generation time, cont
 
 ## Choose one high-leverage target
 
-Prefer a judgment that is both task-critical and reusable:
+Prefer a judgment that is both task-critical and reusable. Selecting one learning seam limits only the teaching intervention and ledger label; it must never limit architecture, security, reliability, compatibility, testing, or other engineering coverage required by the task.
 
 - defining the actual outcome or non-goal;
 - locating the true system boundary;
@@ -111,7 +157,7 @@ Skip a checkpoint when the task is mechanical, the answer is already obvious, th
 
 ## Prediction and decision checkpoints
 
-Ask before revealing decisive evidence only in `focus`, or as an optional challenge in `auto`. Never hide safety-critical information.
+Ask before revealing decisive evidence in `focus` or `deep`, or as an optional challenge in `auto`, only when the pause adds value. Never hide safety-critical or delivery-critical information.
 
 Good prompts take under a minute to answer:
 
@@ -193,7 +239,7 @@ Local completion closes only the first two. When the claimed value depends on re
 
 ## Recording policy
 
-The Agent, not the user, handles routine ledger plumbing. After a non-trivial task, record no more than one or two events and only when final evidence supports a durable decision, verification, correction, reflection, or transfer.
+The Agent, not the user, handles routine ledger plumbing. Record nothing in `off` or an explicit delivery-only task. In `auto`, record at most one clearly durable event; in `focus` or `deep`, record no more than one or two events. In every mode, final evidence must support a durable decision, verification, correction, reflection, or transfer.
 
 Assign one of the six capability directions only when the mapping is clear. Omit it rather than forcing a label. Never record generated-code volume, tool use, task completion alone, or an inferred weakness without evidence.
 

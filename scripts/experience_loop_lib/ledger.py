@@ -137,6 +137,7 @@ def record_event(
         "id": "evt_%s" % uuid.uuid4().hex,
         "timestamp": utc_now(),
         "project_id": project_id,
+        "mode": profile.get("mode"),
         "kind": kind,
         "summary": cleaned_summary,
         "evidence": clean_evidence,

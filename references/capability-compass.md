@@ -8,6 +8,8 @@ Optimize for increasingly independent judgment under real constraints, not for g
 
 Keep the compass internal during ordinary work. The user should not need to choose categories or maintain a skill matrix.
 
+Selecting one direction limits only the learning seam and ledger label. It must never narrow engineering inspection, testing, security review, reliability work, or acceptance coverage. A task may require many engineering concerns while highlighting only one reusable human judgment.
+
 ## Six directions
 
 ### Problem framing (`problem-framing`)
@@ -52,10 +54,10 @@ For each non-trivial task:
 
 1. Identify the judgment that most affects correctness, user value, safety, or recovery.
 2. Map it to one direction; do not split attention across all six.
-3. Prefer a direction that recurs in the user's real responsibilities.
+3. Prefer a direction that recurs in the user's responsibilities or domains when an authorized profile makes that relevant.
 4. Use prior ledger evidence only as a tie-breaker. One missing category is not automatically a gap.
 5. Prefer a chance for stronger evidence—independent prediction, correction, verification, or transfer—over another explanation.
-6. Skip capability work when no durable judgment exists.
+6. In `auto`, skip capability work when no durable judgment exists or interruption cost exceeds concrete current or future value.
 
 Do not announce the selected direction unless it helps the user review the result or they asked for a growth explanation.
 

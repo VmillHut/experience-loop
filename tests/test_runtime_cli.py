@@ -33,8 +33,11 @@ class RuntimeCliTests(unittest.TestCase):
             self.assertEqual(mode_help.returncode, 0, mode_help.stderr)
             self.assertIn("auto", mode_help.stdout)
             self.assertIn("focus", mode_help.stdout)
+            self.assertIn("deep", mode_help.stdout)
             self.assertIn("off", mode_help.stdout)
             self.assertNotIn("ship", mode_help.stdout)
+            self.assertNotIn("coach", mode_help.stdout)
+            self.assertNotIn("incident", mode_help.stdout)
 
     def test_setup_is_idempotent_and_preserves_custom_profile(self) -> None:
         with tempfile.TemporaryDirectory(prefix="experience-loop-runtime-") as raw:
@@ -50,12 +53,22 @@ class RuntimeCliTests(unittest.TestCase):
                 "backend-engineer",
                 "--experience-level",
                 "1-3 years",
+                "--responsibility",
+                "支付链路, 发布质量",
+                "--responsibility",
+                "支付链路",
+                "--domain",
+                "支付；Unity 客户端",
                 "--goal",
                 "架构决策, 代码审查",
                 "--goal",
                 "架构决策",
                 "--learning-focus",
                 "测试设计；故障诊断",
+                "--explanation-style",
+                "先结论，再解释机制",
+                "--delivery-context",
+                "双周发布且兼容旧客户端",
                 "--mode",
                 "coach",
                 "--privacy",
@@ -67,8 +80,12 @@ class RuntimeCliTests(unittest.TestCase):
             self.assertEqual(profile["name"], "小林")
             self.assertEqual(profile["role"], "backend-engineer")
             self.assertEqual(profile["experience_level"], "1-3 years")
+            self.assertEqual(profile["responsibilities"], ["支付链路", "发布质量"])
+            self.assertEqual(profile["domains"], ["支付", "Unity 客户端"])
             self.assertEqual(profile["goals"], ["架构决策", "代码审查"])
             self.assertEqual(profile["learning_focus"], ["测试设计", "故障诊断"])
+            self.assertEqual(profile["explanation_style"], "先结论，再解释机制")
+            self.assertEqual(profile["delivery_context"], "双周发布且兼容旧客户端")
             self.assertEqual(profile["mode"], "focus")
             self.assertEqual(profile["privacy"], "restricted")
             self.assertTrue(profile["customized"])
@@ -83,8 +100,12 @@ class RuntimeCliTests(unittest.TestCase):
                 "name",
                 "role",
                 "experience_level",
+                "responsibilities",
+                "domains",
                 "goals",
                 "learning_focus",
+                "explanation_style",
+                "delivery_context",
                 "mode",
                 "privacy",
                 "customized",
@@ -92,23 +113,113 @@ class RuntimeCliTests(unittest.TestCase):
             ):
                 self.assertEqual(second_profile[field], profile[field], field)
 
-    def test_default_mode_and_legacy_profiles_normalize_without_user_migration(self) -> None:
+    def test_four_modes_and_legacy_profiles_normalize_without_user_migration(self) -> None:
         with tempfile.TemporaryDirectory(prefix="experience-loop-mode-migration-") as raw:
             home = Path(raw) / "data"
             setup = assert_ok(self, run_cli(home, "setup"))
             self.assertEqual(setup["profile"]["mode"], "auto")
 
+            for mode in ("auto", "focus", "deep", "off"):
+                switched = assert_ok(self, run_cli(home, "mode", mode))
+                self.assertEqual(switched["mode"], mode)
+                self.assertTrue(switched["persisted"])
+                self.assertEqual(
+                    switched["records_learning_events"], mode != "off"
+                )
+                self.assertEqual(
+                    assert_ok(self, run_cli(home, "status"))["mode"], mode
+                )
+
+            for legacy_mode, expected in (
+                ("ship", "auto"),
+                ("incident", "auto"),
+                ("coach", "focus"),
+            ):
+                switched = assert_ok(self, run_cli(home, "mode", legacy_mode))
+                self.assertEqual(switched["mode"], expected)
+
             profile_path = home / "profile.json"
             persisted = json.loads(profile_path.read_text(encoding="utf-8"))
-            persisted["mode"] = "incident"
+            for legacy_mode, expected in (
+                ("ship", "auto"),
+                ("incident", "auto"),
+                ("coach", "focus"),
+                ("deep", "deep"),
+            ):
+                persisted["mode"] = legacy_mode
+                profile_path.write_text(
+                    json.dumps(persisted, ensure_ascii=False), encoding="utf-8"
+                )
+                status = assert_ok(self, run_cli(home, "status"))
+                self.assertEqual(status["mode"], expected)
+
+    def test_mode_query_is_lightweight_and_reports_persisted_controls(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="experience-loop-mode-query-") as raw:
+            home = Path(raw) / "data"
+
+            uninitialized = assert_ok(self, run_cli(home, "mode"))
+            self.assertEqual(uninitialized["mode"], "auto")
+            self.assertFalse(uninitialized["persisted"])
+            self.assertFalse(uninitialized["profile_customized"])
+            self.assertEqual(uninitialized["privacy"], "normal")
+            self.assertFalse(home.exists())
+
+            saved_off = assert_ok(self, run_cli(home, "mode", "off"))
+            self.assertEqual(saved_off["mode"], "off")
+            self.assertTrue(saved_off["persisted"])
+            self.assertFalse(saved_off["records_learning_events"])
+            self.assertTrue(home.exists())
+
+            privacy_only = assert_ok(
+                self, run_cli(home, "setup", "--privacy", "restricted")
+            )
+            self.assertFalse(privacy_only["profile"]["customized"])
+            privacy_controls = assert_ok(self, run_cli(home, "mode"))
+            self.assertFalse(privacy_controls["profile_customized"])
+            self.assertEqual(privacy_controls["privacy"], "restricted")
+
+            assert_ok(
+                self,
+                run_cli(
+                    home,
+                    "setup",
+                    "--responsibility",
+                    "支付链路",
+                    "--mode",
+                    "deep",
+                    "--privacy",
+                    "restricted",
+                ),
+            )
+            persisted = assert_ok(self, run_cli(home, "mode"))
+            self.assertEqual(persisted["mode"], "deep")
+            self.assertTrue(persisted["persisted"])
+            self.assertTrue(persisted["profile_customized"])
+            self.assertEqual(persisted["privacy"], "restricted")
+            self.assertTrue(persisted["records_learning_events"])
+
+    def test_mode_off_ignores_unrelated_profile_content_corruption(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="experience-loop-mode-corrupt-") as raw:
+            home = Path(raw) / "data"
+            assert_ok(self, run_cli(home, "setup"))
+            profile_path = home / "profile.json"
+            damaged = json.loads(profile_path.read_text(encoding="utf-8"))
+            damaged["responsibilities"] = [{"unexpected": "object"}]
+            damaged["customized"] = False
             profile_path.write_text(
-                json.dumps(persisted, ensure_ascii=False), encoding="utf-8"
+                json.dumps(damaged, ensure_ascii=False), encoding="utf-8"
             )
 
-            status = assert_ok(self, run_cli(home, "status"))
-            self.assertEqual(status["mode"], "auto")
-            switched = assert_ok(self, run_cli(home, "mode", "deep"))
-            self.assertEqual(switched["mode"], "focus")
+            switched = assert_ok(self, run_cli(home, "mode", "off"))
+            self.assertEqual(switched["mode"], "off")
+            self.assertTrue(switched["profile_customized"])
+            queried = assert_ok(self, run_cli(home, "mode"))
+            self.assertEqual(queried["mode"], "off")
+            self.assertTrue(queried["profile_customized"])
+
+            invalid_profile = run_cli(home, "profile", "show")
+            self.assertEqual(invalid_profile.returncode, 6)
+            self.assertEqual(payload(invalid_profile)["error"]["code"], 6)
 
     def test_status_distinguishes_sources_placeholders_and_storage_files(self) -> None:
         with tempfile.TemporaryDirectory(prefix="experience-loop-status-") as raw:
@@ -204,7 +315,8 @@ class RuntimeCliTests(unittest.TestCase):
         with tempfile.TemporaryDirectory(prefix="experience-loop-capability-") as raw:
             home = Path(raw) / "data"
             assert_ok(self, run_cli(home, "setup"))
-            assert_ok(
+            assert_ok(self, run_cli(home, "mode", "deep"))
+            recorded = assert_ok(
                 self,
                 run_cli(
                     home,
@@ -222,8 +334,10 @@ class RuntimeCliTests(unittest.TestCase):
                     "python -m unittest tests.test_retry",
                 ),
             )
+            self.assertEqual(recorded["event"]["mode"], "deep")
 
             review = assert_ok(self, run_cli(home, "ledger", "review"))
+            self.assertEqual(review["events"][0]["mode"], "deep")
             self.assertEqual(
                 review["capability_evidence"],
                 [
@@ -250,10 +364,18 @@ class RuntimeCliTests(unittest.TestCase):
                     "setup",
                     "--name",
                     "旧名字",
+                    "--responsibility",
+                    "旧责任",
+                    "--domain",
+                    "旧领域",
                     "--goal",
                     "旧目标, 保留目标",
                     "--learning-focus",
                     "旧方向",
+                    "--explanation-style",
+                    "旧解释偏好",
+                    "--delivery-context",
+                    "旧交付场景",
                 ),
             )
 
@@ -264,6 +386,12 @@ class RuntimeCliTests(unittest.TestCase):
                     "profile",
                     "update",
                     "--clear-name",
+                    "--responsibility",
+                    "支付链路, 发布质量",
+                    "--replace-responsibilities",
+                    "--domain",
+                    "支付, 游戏客户端",
+                    "--replace-domains",
                     "--goal",
                     "架构决策",
                     "--replace-goals",
@@ -272,13 +400,25 @@ class RuntimeCliTests(unittest.TestCase):
                     "--replace-learning-focus",
                     "--experience-level",
                     "2 years",
+                    "--explanation-style",
+                    "先给结论，再解释失效条件",
+                    "--delivery-context",
+                    "每周发布，必须兼容旧客户端",
                 ),
             )
             profile = updated["profile"]
             self.assertIsNone(profile["name"])
+            self.assertEqual(profile["responsibilities"], ["支付链路", "发布质量"])
+            self.assertEqual(profile["domains"], ["支付", "游戏客户端"])
             self.assertEqual(profile["goals"], ["架构决策"])
             self.assertEqual(profile["learning_focus"], ["代码审查", "故障诊断"])
             self.assertEqual(profile["experience_level"], "2 years")
+            self.assertEqual(
+                profile["explanation_style"], "先给结论，再解释失效条件"
+            )
+            self.assertEqual(
+                profile["delivery_context"], "每周发布，必须兼容旧客户端"
+            )
 
             cleared = assert_ok(
                 self,
@@ -286,16 +426,122 @@ class RuntimeCliTests(unittest.TestCase):
                     home,
                     "profile",
                     "update",
+                    "--clear-responsibilities",
+                    "--clear-domains",
                     "--clear-goals",
                     "--clear-learning-focus",
                     "--clear-experience-level",
+                    "--clear-explanation-style",
+                    "--clear-delivery-context",
                 ),
             )
+            self.assertEqual(cleared["profile"]["responsibilities"], [])
+            self.assertEqual(cleared["profile"]["domains"], [])
             self.assertEqual(cleared["profile"]["goals"], [])
             self.assertEqual(cleared["profile"]["learning_focus"], [])
             self.assertIsNone(cleared["profile"]["experience_level"])
+            self.assertIsNone(cleared["profile"]["explanation_style"])
+            self.assertIsNone(cleared["profile"]["delivery_context"])
             shown = assert_ok(self, run_cli(home, "profile", "show"))
             self.assertEqual(shown["profile"], cleared["profile"])
+
+    def test_profile_rejects_clear_plus_new_values_without_mutation(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="experience-loop-profile-conflict-") as raw:
+            home = Path(raw) / "data"
+            initial = assert_ok(
+                self,
+                run_cli(
+                    home,
+                    "setup",
+                    "--responsibility",
+                    "旧责任",
+                    "--domain",
+                    "旧领域",
+                    "--goal",
+                    "旧目标",
+                    "--learning-focus",
+                    "旧方向",
+                ),
+            )["profile"]
+
+            conflicts = (
+                ("--clear-responsibilities", "--responsibility", "新责任"),
+                ("--clear-domains", "--domain", "新领域"),
+                ("--clear-goals", "--goal", "新目标"),
+                ("--clear-learning-focus", "--learning-focus", "新方向"),
+            )
+            for clear_flag, value_flag, value in conflicts:
+                failed = run_cli(
+                    home, "profile", "update", clear_flag, value_flag, value
+                )
+                self.assertEqual(failed.returncode, 2, failed.stderr)
+                self.assertEqual(payload(failed)["error"]["code"], 2)
+
+            shown = assert_ok(self, run_cli(home, "profile", "show"))["profile"]
+            for field in (
+                "responsibilities",
+                "domains",
+                "goals",
+                "learning_focus",
+                "customized",
+                "updated_at",
+            ):
+                self.assertEqual(shown[field], initial[field], field)
+
+    def test_legacy_profile_backfills_optional_personalization_fields(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="experience-loop-profile-backfill-") as raw:
+            home = Path(raw) / "data"
+            assert_ok(self, run_cli(home, "setup"))
+            profile_path = home / "profile.json"
+            legacy = json.loads(profile_path.read_text(encoding="utf-8"))
+            added_fields = (
+                "responsibilities",
+                "domains",
+                "explanation_style",
+                "delivery_context",
+            )
+            for field in added_fields:
+                legacy.pop(field, None)
+            profile_path.write_text(
+                json.dumps(legacy, ensure_ascii=False), encoding="utf-8"
+            )
+
+            shown = assert_ok(self, run_cli(home, "profile", "show"))["profile"]
+            self.assertEqual(shown["responsibilities"], [])
+            self.assertEqual(shown["domains"], [])
+            self.assertIsNone(shown["explanation_style"])
+            self.assertIsNone(shown["delivery_context"])
+
+            setup = assert_ok(self, run_cli(home, "setup"))
+            self.assertTrue(setup["already_initialized"])
+            materialized = json.loads(profile_path.read_text(encoding="utf-8"))
+            for field in added_fields:
+                self.assertIn(field, materialized)
+
+    def test_profile_validates_array_elements_and_recomputes_customized(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="experience-loop-profile-types-") as raw:
+            home = Path(raw) / "data"
+            assert_ok(self, run_cli(home, "setup", "--privacy", "restricted"))
+            profile_path = home / "profile.json"
+            persisted = json.loads(profile_path.read_text(encoding="utf-8"))
+            persisted["responsibilities"] = ["支付链路"]
+            persisted["customized"] = False
+            profile_path.write_text(
+                json.dumps(persisted, ensure_ascii=False), encoding="utf-8"
+            )
+
+            shown = assert_ok(self, run_cli(home, "profile", "show"))["profile"]
+            self.assertTrue(shown["customized"])
+            controls = assert_ok(self, run_cli(home, "mode"))
+            self.assertTrue(controls["profile_customized"])
+
+            persisted["responsibilities"] = ["支付链路", 7]
+            profile_path.write_text(
+                json.dumps(persisted, ensure_ascii=False), encoding="utf-8"
+            )
+            invalid = run_cli(home, "profile", "show")
+            self.assertEqual(invalid.returncode, 6)
+            self.assertEqual(payload(invalid)["error"]["code"], 6)
 
     def test_transfer_requires_prior_context_and_shared_concept(self) -> None:
         with tempfile.TemporaryDirectory(prefix="experience-loop-transfer-") as raw:
