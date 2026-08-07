@@ -1,6 +1,5 @@
 <div align="center">
-  <img src="assets/icon-small.svg" alt="" width="56">
-  <h1>Experience Loop</h1>
+  <img src="assets/icon-large.svg" alt="Experience Loop" width="620">
 
   <p style="font-size: 1.2em"><strong>You can delegate the code. Do not outsource your judgment with it.</strong></p>
   <p><strong style="color:#0F766E">It strengthens your judgment, not the Agent's.</strong></p>

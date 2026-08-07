@@ -1,6 +1,5 @@
 <div align="center">
-  <img src="assets/icon-small.svg" alt="" width="56">
-  <h1>Experience Loop</h1>
+  <img src="assets/icon-large.svg" alt="Experience Loop" width="620">
 
   <p style="font-size: 1.2em"><strong>代码可以交给 Agent，判断力不能一起外包。</strong></p>
   <p><strong style="color:#0F766E">它提升的不是 Agent 的能力，而是你的判断力。</strong></p>
