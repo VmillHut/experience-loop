@@ -31,7 +31,7 @@
 ## 01 · Understand it in 30 seconds
 
 <blockquote>
-  <p><sub><sub><strong>Experience Loop adds judgment training to the Agent's native workflow: the Agent still implements, tests, and ships; you make verifiable predictions, trade-offs, and reviews at high-value moments, then retain the result as transferable experience.</strong></sub></sub></p>
+  <p><sub><strong>Experience Loop adds judgment training to the Agent workflow: it still implements, tests, and ships; at high-value moments, you predict, weigh trade-offs, and review so experience stays verifiable and transferable.</strong></sub></p>
 </blockquote>
 
 - <strong>The Agent still owns:</strong> analysis, implementation, testing, validation, and delivery.

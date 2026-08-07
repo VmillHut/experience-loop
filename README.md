@@ -31,7 +31,7 @@
 ## 01 · 30 秒看懂它
 
 <blockquote>
-  <p><sub><sub><strong>Experience Loop 在 Agent 原生工作流上增加一层判断训练：实现、测试与交付仍由 Agent 负责；你在高价值节点做可验证的预测、取舍与复盘，并把结果沉淀为可迁移经验。</strong></sub></sub></p>
+  <p><sub><strong>Experience Loop 为 Agent 原生工作流加入判断训练：实现、测试与交付仍由 Agent 负责；你在高价值节点做预测、取舍与复盘，让经验可验证、可迁移。</strong></sub></p>
 </blockquote>
 
 - <strong>Agent 继续负责：</strong>分析、实现、测试、验证与交付。
