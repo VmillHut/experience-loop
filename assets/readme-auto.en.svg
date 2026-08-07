@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1500 570" role="img" aria-labelledby="title desc">
-  <title id="title">How auto decides</title>
+  <title id="title">Experience Loop's evidence-driven intervention mechanism</title>
   <desc id="desc">Experience Loop selects a response from task evidence, the value of a human judgment, and whether it is the right moment to intervene.</desc>
   <defs>
     <linearGradient id="surface" x1="46" y1="20" x2="1455" y2="554" gradientUnits="userSpaceOnUse"><stop stop-color="#0A1221"/><stop offset=".54" stop-color="#101A31"/><stop offset="1" stop-color="#0B1627"/></linearGradient>
@@ -10,7 +10,7 @@
     <marker id="arrow" markerWidth="12" markerHeight="12" refX="9" refY="6" orient="auto"><path d="M1 1L10 6L1 11" fill="none" stroke="#72E7D9" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></marker>
   </defs>
   <rect width="1500" height="570" rx="34" fill="url(#surface)"/>
-  <text x="58" y="63" fill="#F8FAFC" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="31" font-weight="700">`auto` is not a fixed script. It decides from live task evidence.</text>
+  <text x="58" y="63" fill="#F8FAFC" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="31" font-weight="700">Core mechanism: use evidence to decide when to intervene.</text>
   <text x="58" y="90" fill="#8290A7" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="14" font-weight="600" letter-spacing="1.8">DETECT FIRST · THEN CHOOSE THE RESPONSE WITH THE HIGHEST EXPECTED VALUE</text>
   <path d="M58 118H1442" stroke="#9CB3D0" stroke-opacity=".13"/>
   <path d="M261 285H1254" fill="none" stroke="url(#accent)" stroke-width="13" stroke-linecap="round" opacity=".18" filter="url(#glow)"/><path d="M261 285H1254" fill="none" stroke="url(#accent)" stroke-width="3.4" stroke-linecap="round"/>

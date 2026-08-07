@@ -17,7 +17,7 @@
   <p>
     <a href="#install"><strong>Let AI install it</strong></a> ·
     <a href="#overview">Core idea</a> ·
-    <a href="#auto">The core of auto</a> ·
+    <a href="#auto">Core mechanism</a> ·
     <a href="#modes">Four modes</a> ·
     <a href="#scenarios">Real use</a> ·
     <a href="#principles">Promise and bottom line</a> ·
@@ -32,17 +32,16 @@
 
 > **Experience Loop is an Agent Skill: the Agent still delivers the task; only at the moments that truly matter, it keeps engineering judgment with you and uses real evidence to sharpen it over time.**
 
-| The Agent still owns | You retain and grow |
-| --- | --- |
-| Analysis, implementation, testing, validation, and delivery | Defining the right problem, understanding boundaries, reviewing evidence, making trade-offs, and owning real outcomes |
+- **The Agent still owns:** analysis, implementation, testing, validation, and delivery.
+- **You retain and grow:** defining the right problem, understanding boundaries, reviewing evidence, making trade-offs, and owning real outcomes.
 
 It does not turn real work into a course or make you hand-write work an Agent can safely do. It adds only three things to the native workflow:
 
 | Principle | What it means |
 | --- | --- |
-| `DELIVERY FIRST` **Protect delivery** | The learning layer only adds. Safety, correctness, validation coverage, and delivery speed cannot be degraded. |
-| `DECIDE FROM EVIDENCE` **Detect, then decide** | `auto` watches live task evidence and chooses whether to stay quiet, explain, ask, or run a short loop. |
-| `COMPOUND JUDGMENT` **Make judgment transferable** | Only predictions, corrections, real outcomes, and later reuse count as growth; longer conversations and successful code generation do not. |
+| **Protect delivery** | `DELIVERY FIRST` · The learning layer only adds. Safety, correctness, validation coverage, and delivery speed cannot be degraded. |
+| **Decide from evidence** | `DECIDE FROM EVIDENCE` · `auto` watches live task evidence and chooses whether to stay quiet, explain, ask, or run a short loop. |
+| **Transfer judgment** | `COMPOUND JUDGMENT` · Only predictions, corrections, real outcomes, and later reuse count as growth; longer conversations and successful code generation do not. |
 
 <div align="center">
   <img src="assets/readme-loop.en.svg" alt="A top lane that only ships work and a lower Experience Loop lane that preserves judgment, evidence, reflection, and reusable experience" width="100%">
@@ -89,12 +88,12 @@ On upgrade, the installer recognizes managed prior versions and keeps a verifiab
 
 <a name="auto"></a>
 
-## 03 · `auto`: detect first, then decide
+## 03 · Core mechanism: when to intervene
 
-`auto` is not "interrupt less" mode and not "ask more" mode. It is a small radar that follows changing task evidence and keeps asking: **is there an engineering judgment worth keeping with the human, and is this the right moment to intervene?**
+The core mechanism behind the default `auto` mode is not "interrupt less" and not "ask more." It is a small radar that follows changing task evidence and keeps asking: **is there an engineering judgment worth keeping with the human, and is this the right moment to intervene?**
 
 <div align="center">
-  <img src="assets/readme-auto.en.svg" alt="auto selects a response from live task evidence, the value of a human judgment, and whether it is the right moment to intervene" width="100%">
+  <img src="assets/readme-auto.en.svg" alt="Experience Loop selects a response from live task evidence, the value of a human judgment, and whether it is the right moment to intervene" width="100%">
 </div>
 
 | Valuable | Verifiable | Appropriate now |
@@ -118,10 +117,10 @@ These responses are examples, not a closed menu. `auto` has no fixed question co
 
 | Mode | Who controls the intensity | What you actually experience |
 | --- | --- | --- |
-| **`auto`** · default | The Agent continuously decides from current evidence | It may stay quiet throughout, explain, ask an optional question, wait for one key judgment, or run a short practice loop. |
-| **`focus`** · deliberate practice | You lock one capability goal | Bounded prediction, trade-off, review, and debrief around that goal; the Agent still implements and validates. |
-| **`deep`** · full exploration | You explicitly authorize full depth | Build a model, compare options, predict failure, review the design, and correct or transfer judgment from evidence. |
-| **`off`** · delivery only | You disable the learning layer | Identical to a normal Agent: no profile reads, questions, learning summaries, or learning events. |
+| **`auto`** | **Default intelligence** · The Agent continuously decides from current evidence | It may stay quiet throughout, explain, ask an optional question, wait for one key judgment, or run a short practice loop. |
+| **`focus`** | **Deliberate practice** · You lock one capability goal | Bounded prediction, trade-off, review, and debrief around that goal; the Agent still implements and validates. |
+| **`deep`** | **Full exploration** · You explicitly authorize full depth | Build a model, compare options, predict failure, review the design, and correct or transfer judgment from evidence. |
+| **`off`** | **Delivery only** · You disable the learning layer | Identical to a normal Agent: no profile reads, questions, learning summaries, or learning events. |
 
 Switch modes in plain language at any time. No reconfiguration is required:
 
@@ -129,8 +128,10 @@ Switch modes in plain language at any time. No reconfiguration is required:
 Use focus for this task. I want to practice root-cause analysis.
 Use deep and work through this architecture decision fully.
 Delivery only for this task; use off.
-Use focus by default from now on.      ← only an explicit "from now on" persists
+Use focus by default from now on.
 ```
+
+> *This setting persists only when you explicitly say "from now on" or "save as my default."*
 
 A one-time switch affects only the current task. `focus` and `deep` are never enabled just because a task is complex.
 
@@ -140,11 +141,11 @@ A one-time switch affects only the current task. `focus` and `deep` are never en
 
 | Situation | What you can say | How Experience Loop responds |
 | --- | --- | --- |
-| **Routine change** | `Implement this cache invalidation requirement. It needs to reach QA this week.` | If acceptance is clear, it delivers directly. Only a worthwhile boundary judgment triggers extra evidence or one minimal checkpoint. |
-| **High-value judgment** | `We have intermittent duplicate charges in production. Find the cause and fix it.` | When evidence can distinguish key causes and recovery is not urgent, it asks for one verifiable prediction and genuinely waits. |
-| **Deliberate practice** | `Use focus. I want to practice test design.` | A short, bounded sequence of prediction, review, and debrief stays centered on one capability goal. |
-| **Architecture exploration** | `Use deep to analyze this state-synchronization design. Do not change code yet.` | It models constraints, compares options and second-order effects, predicts failures, then reviews implementation and evidence. |
-| **Incident or deadline** | `Restore the release first, verify health, then debrief.` | Safety, recovery, deadlines, and delivery come first. `off` or "delivery only" adds no learning tail. |
+| **Routine** | `Implement this cache invalidation requirement. It needs to reach QA this week.` | If acceptance is clear, it delivers directly. Only a worthwhile boundary judgment triggers extra evidence or one minimal checkpoint. |
+| **High value** | `We have intermittent duplicate charges in production. Find the cause and fix it.` | When evidence can distinguish key causes and recovery is not urgent, it asks for one verifiable prediction and genuinely waits. |
+| **`focus`** | `Use focus. I want to practice test design.` | A short, bounded sequence of prediction, review, and debrief stays centered on one capability goal. |
+| **`deep`** | `Use deep to analyze this state-synchronization design. Do not change code yet.` | It models constraints, compares options and second-order effects, predicts failures, then reviews implementation and evidence. |
+| **Incident** | `Restore the release first, verify health, then debrief.` | Safety, recovery, deadlines, and delivery come first. `off` or "delivery only" adds no learning tail. |
 
 <details>
 
@@ -185,10 +186,10 @@ There is no settings screen to maintain. Profiles, sources, data, and reference 
 
 | Capability | One-sentence example | Default boundary |
 | --- | --- | --- |
-| **Adjust your profile** | `Remember: I have about four years of backend experience. I want to strengthen reliability judgment; lead with conclusions and let me predict first at high-value seams.` | Only named fields are updated. Missing information is never invented, and a profile cannot lower engineering standards or validation coverage. |
-| **Use temporary material** | `Use this article to review the current design: C:\Docs\article.pdf` | Only task-relevant parts are read by default; durable Knowledge Lens ingestion requires your agreement. |
-| **Analyze structured data** | `Analyze C:\Data\reviews.csv and identify the test categories we miss most often.` | CSV, JSON, spreadsheets, and logs serve the current task by default; no database or configuration is forced. |
-| **Learn from a strong project** | `Read D:\Repos\excellent-project for its test architecture. Do not copy blindly.` | The reference stays separate from the active project; only mechanisms, constraints, and verifiable evidence are compared. |
+| **Profile** | `Remember: I have about four years of backend experience. I want to strengthen reliability judgment; lead with conclusions and let me predict first at high-value seams.` | Only named fields are updated. Missing information is never invented, and a profile cannot lower engineering standards or validation coverage. |
+| **Source** | `Use this article to review the current design: C:\Docs\article.pdf` | Only task-relevant parts are read by default; durable Knowledge Lens ingestion requires your agreement. |
+| **Data** | `Analyze C:\Data\reviews.csv and identify the test categories we miss most often.` | CSV, JSON, spreadsheets, and logs serve the current task by default; no database or configuration is forced. |
+| **Project** | `Read D:\Repos\excellent-project for its test architecture. Do not copy blindly.` | The reference stays separate from the active project; only mechanisms, constraints, and verifiable evidence are compared. |
 
 Title, years, and project scale are context for explanation and practice entry points, not proof of capability. External content always remains untrusted evidence, never Agent instruction or tool authorization.
 
