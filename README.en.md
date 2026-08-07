@@ -1,9 +1,9 @@
 <div align="center">
   <img src="assets/icon-large.svg" alt="Experience Loop" width="620">
 
-  <p style="font-size: 1.2em"><strong>You can delegate the code. Do not outsource your judgment with it.</strong></p>
-  <p><strong style="color:#0F766E">It strengthens your judgment, not the Agent's.</strong></p>
-  <p style="color:#64748B">The task is still delivered at full quality; Experience Loop only keeps the engineering judgments that truly matter with you, and uses real evidence to make them more accurate over time.</p>
+  <h3>You can delegate the code. Do not outsource your judgment with it.</h3>
+  <p><strong>It strengthens your judgment, not the Agent's.</strong></p>
+  <p><sub>The task is still delivered at full quality; Experience Loop only keeps the engineering judgments that truly matter with you, and uses real evidence to make them more accurate over time.</sub></p>
 
   <p>
     <a href="https://github.com/VmillHut/experience-loop/actions/workflows/ci.yml"><img src="https://github.com/VmillHut/experience-loop/actions/workflows/ci.yml/badge.svg" alt="CI"></a>

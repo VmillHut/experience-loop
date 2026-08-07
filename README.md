@@ -1,9 +1,9 @@
 <div align="center">
   <img src="assets/icon-large.svg" alt="Experience Loop" width="620">
 
-  <p style="font-size: 1.2em"><strong>代码可以交给 Agent，判断力不能一起外包。</strong></p>
-  <p><strong style="color:#0F766E">它提升的不是 Agent 的能力，而是你的判断力。</strong></p>
-  <p style="color:#64748B">任务照常由 Agent 高质量完成；Experience Loop 只在真正值得的节点，把工程判断留给你，用真实证据让它越练越准。</p>
+  <h3>代码可以交给 Agent，判断力不能一起外包。</h3>
+  <p><strong>它提升的不是 Agent 的能力，而是你的判断力。</strong></p>
+  <p><sub>任务照常由 Agent 高质量完成；Experience Loop 只在真正值得的节点，把工程判断留给你，用真实证据让它越练越准。</sub></p>
 
   <p>
     <a href="https://github.com/VmillHut/experience-loop/actions/workflows/ci.yml"><img src="https://github.com/VmillHut/experience-loop/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
