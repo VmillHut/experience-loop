@@ -58,7 +58,9 @@ It does not turn real work into a course or make you hand-write work an Agent ca
 > The simplest installation path is to give the sentence below to any AI with local terminal and filesystem access.
 
 ```text
-Install and initialize the `experience-loop` Skill from https://github.com/VmillHut/experience-loop; follow the repository-specific safety and acceptance contract in `docs/AI_INSTALL.en.md`.
+Install and initialize the `experience-loop` Skill from:
+https://github.com/VmillHut/experience-loop
+Follow the repository-specific safety and acceptance contract in `docs/AI_INSTALL.en.md`.
 ```
 
 | 01 · Resolve the host | 02 · Install and verify | 03 · Optional onboarding |

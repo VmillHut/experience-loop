@@ -58,7 +58,9 @@
 > 最省事的安装方式，是把下面这句话交给任何拥有本机终端和文件权限的 AI。
 
 ```text
-请根据 https://github.com/VmillHut/experience-loop 安装并初始化 `experience-loop` Skill；仓库特有的安全与验收要求见 `docs/AI_INSTALL.md`。
+请根据以下仓库安装并初始化 `experience-loop` Skill：
+https://github.com/VmillHut/experience-loop
+仓库特有的安全与验收要求见 `docs/AI_INSTALL.md`。
 ```
 
 | 01 · 解析宿主 | 02 · 安装与验收 | 03 · 可选初始化 |
