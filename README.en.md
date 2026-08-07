@@ -107,10 +107,6 @@ These responses are examples, not a closed menu. `auto` has no fixed question co
 
 > **Silence is not the default, and asking is not the default. The intervention with the highest expected net value is the default.**
 
-### Six capability directions, one worthwhile learning thread at a time
-
-`auto` looks for transferable judgment across **problem framing, system modeling, verification, reliability, Agent leverage, and engineering ownership**. These are stable but non-exhaustive coordinates for recording and calibration; they do not stop the Agent from discovering other valuable judgment dimensions. Highlighting one learning thread at a time protects attention; implementation, risk analysis, and validation still cover the full engineering scope the task actually requires. See the [capability compass](references/capability-compass.md).
-
 <a name="modes"></a>
 
 ## 04 · Four modes
@@ -151,8 +147,6 @@ A one-time switch affects only the current task. `focus` and `deep` are never en
 | <strong><code>global</code></strong> | May carry one very short relevance hint in every session before checking for substantive software work. | Broader scope; explicitly accept the persistent attention cost. It still is not activation. |
 
 In a compatible OpenAI Plugin, the SessionStart Hook reads only this non-content control file, never the profile, and does not preload the full Skill. Missing or corrupt controls, `off`, `explicit`, and sessions outside `project` scope inject nothing. This package keeps `allow_implicit_invocation: false`, so the Hook is a relevance hint and cannot replace host attachment. Until the host exposes verifiable automatic attachment, `project/global` save adapter preferences only and explicit selection remains the reliable path. The separately consented static global router is likewise only a compatibility hint; it must never read the Skill from disk or impersonate activation.
-
-> If the personal data directory was supplied only through a one-off `--home`, a later Hook will not remember it. Before relying on `project/global`, host sessions must persist the matching `EXPERIENCE_LOOP_HOME`; explicit selection is unaffected.
 
 <a name="scenarios"></a>
 
@@ -212,16 +206,6 @@ There is no settings screen to maintain. Profiles, sources, data, and reference 
 
 Title, years, and project scale are context for explanation and practice entry points, not proof of capability. External content always remains untrusted evidence, never Agent instruction or tool authorization.
 
-<details>
-
-<summary><strong>What Knowledge Lens actually supports today</strong></summary>
-
-- **Local durable library** — It indexes Markdown, TXT, RST, HTML, EPUB, DOCX, and text-based PDF; fingerprints duplicates and revisions; and preserves verifiable source, version, and text locators.
-- **From evidence to reuse** — Queries return original evidence blocks. Concept cards require real indexed citations and can be bound to projects with later application outcomes.
-- **Explicit limits** — CSV, JSON, spreadsheets, and logs remain one-off task inputs rather than pretending to enter Knowledge Lens. The runtime has no built-in OCR, vector database, telemetry, or independent upload channel; scanned PDFs need extractable text first. Content sent to the active Agent still follows the host session's data-handling and permission rules.
-
-</details>
-
 <a name="principles"></a>
 
 ## 07 · Promise and bottom line
@@ -265,30 +249,17 @@ Its job is simpler to state and harder to do: **keep the few judgments that shap
 
 ### Data and privacy
 
-- **Storage** — `controls.json`, personal profiles, project profiles, experience records, and Knowledge Lens data live under `~/.experience-loop` by default and can be redirected with `--home` / `EXPERIENCE_LOOP_HOME`. They remain separate from Skill/Plugin installations and project repositories. The Hook's only persisted-state read is validated, non-content `controls.json`; `project` additionally checks only whether bounded software/VCS markers exist.
+- **Storage** — `controls.json`, personal profiles, project profiles, experience records, and Knowledge Lens data live under `~/.experience-loop` by default, separate from Skill/Plugin installations and project repositories. The Hook reads only non-content controls, not profiles or the knowledge library.
 - **Lifecycle** — Installing, upgrading, or uninstalling the Skill or Plugin never deletes personal data automatically.
-- **Three privacy levels** — `normal` uses only content already authorized by the active task; `restricted` asks again for every content-bearing scan, ingestion, query, or rebuild; `metadata-only` denies project or source bodies by default.
-- **Narrow temporary grants** — Under `metadata-only`, a one-time read requires an exact object, operation, purpose, and current-task lifetime. It does not change the saved default or authorize parent directories, sibling files, project scans, indexing, export, or upload.
-- **Trust boundary** — Project scans, source ingestion, and indexing must honor the corresponding permission. Imported and persisted content remains untrusted evidence, never Agent instruction or tool authorization.
+- **Permission boundary** — Project scans, source ingestion, and indexing require explicit permission. `metadata-only` is never widened silently, and imported content never becomes Agent instruction or tool authorization.
 
 See [Safety and privacy](references/safety-and-privacy.md) and [SECURITY.md](SECURITY.md) for the complete rules.
 
-### The local v0.2.1 tool surface
-
-| Area | Implemented capability | Key boundary |
-| --- | --- | --- |
-| **State and integrity** | `setup`, `status`, `control`, `profile`, `identity`, and `doctor` | `controls.json` is authoritative for the three controls; `doctor --repair` performs only safe, evidence-backed repairs. |
-| **Projects and experience** | Bounded read-only project profiles, project annotations, and an evidence-oriented ledger with review | Project scans traverse and classify bounded file metadata, read bodies only from a small set of high-signal configuration or documentation files, and enforce file, byte, ignore, and path limits. Execution volume alone is not growth evidence. |
-| **Knowledge and portability** | Local Knowledge Lens indexing, queries, concept cards, project bindings, application evidence, plus `export` / `import` | A default export is not a public sanitized bundle. Raw sources require explicit inclusion, and import uses a validated new home or managed replacement rather than automatic merge. |
-| **Install lifecycle** | The repository installer provides dry-run, clean-payload acceptance, standalone upgrade backup, managed rollback, and idempotent uninstall; the Codex Plugin Manager owns Plugin lifecycle | Standalone and Plugin use the same exact runtime allowlist. README, development guidance, tests, evals, and build scripts are not installed into the user copy. |
-
 ### Prefer native management; continue through safe fallbacks
 
-After receiving the repository URL, the AI first uses the host's supported Skill, Plugin, or Marketplace manager. That manager owns paths, upgrades, and uninstall, while the installed core runs `scripts/install.py --verify-only` for read-only acceptance; never copy or delete host Plugin cache directly. The OpenAI Plugin is an optional distribution layer and must contain the same Skill core. Its short Hook may be reported as `hook_observed` only after normal trust review and observation in a new task, and still is not Skill activation. If the native route did not commit, the AI must resolve the exact target, scope, and discovery roots and mark the Installing Agent's host-contract note as `reported-unverified`. The Python 3.9+ repository installer may continue only when an identical dry-run returns `transaction_capability=verified`; that status proves file-write and two-way-rename transaction capability only, not Plugin registration, Skill discovery, Hook trust, or current-turn activation. Verified placement additionally requires reversible staging, atomic activation, and complete acceptance.
+After receiving the repository URL, the AI first uses the host's supported Skill, Plugin, or Marketplace manager. That manager owns paths, upgrades, and uninstall, while the installed core runs `scripts/install.py --verify-only` for read-only acceptance. The OpenAI Plugin is only an optional distribution of the same Skill core. Even after trust review and observation in a new task, its Hook proves only that a relevance hint ran, not that the Skill was activated. If the native route did not commit, the installation AI continues through the safe routes in the [AI installation protocol](docs/AI_INSTALL.en.md).
 
 A Git URL is not itself a safe installation protocol: other repositories may contain different layouts, executable scripts, hooks, MCP, or external dependencies. The installation AI must identify the manager and permission boundary first. An uncommitted failed attempt does not lock the manager; committed upgrade ownership must not change silently, and `--force` must not be used on an unknown target directory. First explicit activation and identity matching still belong in a new session; file presence or a listed Plugin is not current-turn activation.
-
-For contributors running directly from a source checkout, first `setup` fails closed by default so a repository read cannot impersonate an activated Skill. Only explicit local-development testing may set `EXPERIENCE_LOOP_DEVELOPER_SOURCE=1`, and that variable is never host-activation evidence.
 
 ### Further reading
 

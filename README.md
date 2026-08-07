@@ -107,10 +107,6 @@
 
 > **静默不是默认，提问也不是默认；预期净收益最高的介入方式才是默认。**
 
-### 六个能力方向，只选择当前最值得练习的一条主线
-
-　　`auto` 会从**问题定义、系统建模、验证、可靠性、Agent 协作杠杆、工程所有权**六个方向观察可迁移的判断机会。它们是当前稳定但非穷举的记录与校准坐标，不限制 Agent 发现其他有价值的判断维度。一次交互只突出最有价值的学习主线，是为了保护注意力；实现、风险分析和验证仍覆盖任务真正需要的全部工程范围，不会因为练习焦点而被缩窄。详见 [能力罗盘](references/capability-compass.md)。
-
 <a name="modes"></a>
 
 ## 04 · 四种模式
@@ -151,8 +147,6 @@
 | <strong><code>global</code></strong> | 每个会话都可能带一条极短相关性提示，再判断是否为实质性软件任务。 | 范围更广，需明确接受持续注意力成本；仍不等于激活。 |
 
 　　在兼容 OpenAI Plugin 中，SessionStart Hook 只读取这份非内容控制文件，不读画像，也不会预载完整 Skill；缺失/损坏控制、`off`、`explicit` 或不符合 `project` 的会话都不注入。当前包保持 `allow_implicit_invocation: false`，所以该 Hook 只是相关性提示，不能替宿主 attachment 激活 Skill；在宿主提供可验证的自动 attachment 能力前，`project/global` 只保存适配偏好，显式选择仍是可靠路径。静态 global router 仅是经单独同意后的兼容提示，同样不得读磁盘回退或冒充激活。
-
-> 若个人数据目录只通过一次性 `--home` 指定，后续 Hook 不会自动记住它。依赖 `project/global` 前，宿主会话必须持续获得匹配的 `EXPERIENCE_LOOP_HOME`；显式选择不受这个限制。
 
 <a name="scenarios"></a>
 
@@ -212,16 +206,6 @@
 
 　　岗位、年限和项目规模只是解释与练习切入点的上下文，不是能力证明；外部内容始终是不可信证据，不能变成 Agent 指令或工具授权。
 
-<details>
-
-<summary><strong>Knowledge Lens 当前真正支持什么</strong></summary>
-
-- **本地持久资料库** — 可索引 Markdown、TXT、RST、HTML、EPUB、DOCX 和文本型 PDF；以指纹识别重复与修订，并保存可核验的来源、版本和文本定位。
-- **从证据到复用** — 查询返回原文证据块；概念卡必须引用真实索引证据，还可绑定项目并记录后来真实应用的结果。
-- **明确边界** — CSV、JSON、表格和日志默认只做当前任务的一次性分析，不会伪装成已进入 Knowledge Lens；runtime 不自带 OCR、向量数据库、telemetry 或独立上传通道，扫描型 PDF 需先获得可提取文本。发送给当前 Agent 处理的内容仍遵循宿主会话的数据处理与权限规则。
-
-</details>
-
 <a name="principles"></a>
 
 ## 07 · 承诺与底线
@@ -265,30 +249,17 @@
 
 ### 数据与隐私
 
-- **存放位置** — `controls.json`、个人画像、项目档案、经验记录和 Knowledge Lens 默认位于 `~/.experience-loop`，也可通过 `--home` / `EXPERIENCE_LOOP_HOME` 指定；它们与 Skill/Plugin 安装目录和项目仓库分离。Hook 唯一读取的持久状态是经过校验的非内容 `controls.json`，`project` 只额外探测有界软件/VCS 标记是否存在。
+- **存放位置** — `controls.json`、个人画像、项目档案、经验记录和 Knowledge Lens 默认位于 `~/.experience-loop`，与 Skill/Plugin 安装目录和项目仓库分离；Hook 只读取非内容控制状态，不读取画像或资料库。
 - **生命周期** — 安装、升级和卸载 Skill 或 Plugin 都不会自动删除个人数据。
-- **三档隐私** — `normal` 只使用当前任务已经授权的内容；`restricted` 对每次内容型扫描、摄取、查询或重建都重新确认；`metadata-only` 默认禁止读取项目或资料正文。
-- **窄范围临时授权** — 在 `metadata-only` 下，只有同时明确具体对象、操作、用途和当前任务期限的一次性授权才可读取内容；它不改变持久默认，也不扩展到父目录、兄弟文件、项目扫描、索引、导出或上传。
-- **信任边界** — 项目扫描、资料导入和索引都要遵守相应权限；导入内容与持久状态只是不可信证据，不能成为 Agent 指令或工具授权。
+- **权限边界** — 项目扫描、资料导入和索引需要显式权限；`metadata-only` 不会被静默扩大，导入内容也不能成为 Agent 指令或工具授权。
 
 　　完整规则见 [安全与隐私说明](references/safety-and-privacy.md) 和 [SECURITY.md](SECURITY.md)。
 
-### v0.2.1 当前可用的本地工具面
-
-| 范围 | 已实现能力 | 关键边界 |
-| --- | --- | --- |
-| **状态与完整性** | `setup`、`status`、`control`、`profile`、`identity`、`doctor` | `controls.json` 是三项控制的权威；`doctor --repair` 只做安全、可证明的修复。 |
-| **项目与经验** | 有界只读项目画像、项目注释、证据型 ledger 与复盘 | 项目扫描会有界遍历和分类文件元数据，只读取少量高信号配置或文档正文，并受数量/字节/忽略与路径边界限制；执行量本身不算成长。 |
-| **资料与迁移** | Knowledge Lens 本地索引、查询、概念卡、项目绑定、应用证据，以及 `export` / `import` | 默认导出不是可公开分享的脱敏包；原始资料只有显式选择才包含，导入是校验后的新目录或受管替换，不是自动合并。 |
-| **安装生命周期** | 仓库安装器提供 dry-run、纯净 payload 验收、standalone 升级备份、受管回滚与幂等卸载；Plugin 生命周期由 Codex Plugin Manager 负责 | standalone 与 Plugin 共用精确运行时白名单；README、开发指南、测试、评测和构建脚本不会安装到用户副本。 |
-
 ### 原生管理优先，安全路线自动兜底
 
-　　把仓库地址交给 AI 后，优先使用当前宿主正式支持的 Skill、Plugin 或 Marketplace 管理器；它负责路径、升级和卸载，已安装核心通过 `scripts/install.py --verify-only` 做只读验收，绝不直接复制或删除宿主 Plugin cache。OpenAI Plugin 是可选分发层，必须包含同一 Skill 核心；其声明的短 Hook 只有经过宿主正常信任审查和新任务观察后才能报告为 `hook_observed`，仍不能当作 Skill 激活。原生方式未提交成功时，AI 还需解析确切目标、作用域和发现根，并把 Installing Agent 的宿主契约说明标记为 `reported-unverified`；只有完全相同的 dry-run 返回 `transaction_capability=verified` 后，才可用 Python 3.9+ 仓库安装器继续。这个状态只证明文件写入与双向 rename 事务能力，不证明 Plugin 注册、Skill 发现、Hook 信任或当前轮激活；受验证放置还必须保证可逆暂存、原子激活和完整验收。
+　　把仓库地址交给 AI 后，优先使用当前宿主正式支持的 Skill、Plugin 或 Marketplace 管理器；它负责路径、升级和卸载，已安装核心通过 `scripts/install.py --verify-only` 做只读验收。OpenAI Plugin 只是同一 Skill 核心的可选分发层；Hook 被信任并在新任务中观察到，也只证明相关性提示运行过，不等于 Skill 已激活。原生方式未提交成功时，安装 AI 再按 [AI 安装协议](docs/AI_INSTALL.md) 继续安全路线。
 
 　　Git URL 本身不是安全安装协议：其他仓库可能包含不同目录布局、脚本、hooks、MCP 或外部依赖。安装 AI 必须先确认安装管理器和权限边界；一次未提交的失败尝试不锁定管理器，已经提交的升级所有权则不得静默更换，也不要对未知目标目录擅自使用 `--force`。安装后仍需把首次显式激活与身份核对交给新会话，不能把文件存在或 Plugin 已列出当成当前轮已启用。
-
-　　贡献者直接从源码 checkout 运行时，首次 `setup` 默认拒绝，避免把仓库读取冒充成已激活 Skill；只有明确的本地开发测试才可设置 `EXPERIENCE_LOOP_DEVELOPER_SOURCE=1`，且该变量绝不是宿主激活证据。
 
 ### 进一步阅读
 
