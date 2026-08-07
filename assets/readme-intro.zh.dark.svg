@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="180" viewBox="0 0 1080 180" role="img" aria-labelledby="title desc">
+  <title id="title">Experience Loop 的核心主张</title>
+  <desc id="desc">代码可以交给 Agent，判断力不能一起外包。它提升的不是 Agent 的能力，而是你的判断力。任务照常由 Agent 高质量完成；只在关键节点，把工程判断留给你，并用真实证据让它越练越准。</desc>
+  <g text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Microsoft YaHei', 'PingFang SC', Arial, sans-serif">
+    <text x="540" y="52" fill="#F8FAFC" font-size="40" font-weight="700">代码可以交给 Agent，判断力不能一起外包。</text>
+    <path d="M338 83H430M650 83H742" fill="none" stroke="#2DD4BF" stroke-width="2" stroke-linecap="round"/>
+    <text x="540" y="91" fill="#5EEAD4" font-size="13" font-weight="700" letter-spacing="2.5">EXPERIENCE LOOP</text>
+    <text x="540" y="121" fill="#5EEAD4" font-size="24" font-weight="650">它提升的不是 Agent 的能力，而是你的判断力。</text>
+    <text x="540" y="158" fill="#94A3B8" font-size="18" font-weight="400">任务照常由 Agent 高质量完成；只在关键节点，把工程判断留给你，并用真实证据让它越练越准。</text>
+  </g>
+</svg>
