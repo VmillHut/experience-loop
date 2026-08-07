@@ -10,7 +10,7 @@
     <a href="https://github.com/VmillHut/experience-loop/actions/workflows/ci.yml"><strong>CI</strong></a> ·
     <strong>Python 3.9+</strong> ·
     <strong>Tested 3.9–3.14</strong> ·
-    <strong>v0.2.0</strong> ·
+    <strong>v0.2.1</strong> ·
     <a href="LICENSE"><strong>MIT</strong></a>
   </p>
 
@@ -60,10 +60,10 @@
 请根据 https://github.com/VmillHut/experience-loop 安装 `experience-loop`：优先使用当前宿主原生 Skill、Plugin 或 Marketplace 管理器；OpenAI 宿主支持 Plugin 生命周期时可使用其分发层，否则安装完整可移植 Skill 核心。若某个命令、目录或方式受限，请在现有权限内按 `docs/AI_INSTALL.md` 自动继续下一条安全路线，完成文件、运行时和宿主发现验收，并把首次显式激活交接到新会话；不要在安装轮假定 Skill 已激活或开始初始化。
 ```
 
-1. **选择包装与管理器** — 可移植 Skill 是唯一行为核心；OpenAI Plugin 只是包含同一核心的可选分发层，并附带受限的动态路由 Hook。
-2. **持续推进并分项验收** — 文件、运行时、宿主发现和当前轮激活是四项独立事实；前一项成功不能代替后一项。
-3. **新会话显式激活** — 首次安装后新开或刷新会话，用宿主返回且实际验证过的精确 selector 显式调用，并核对安装回执中的 `identity` 指纹。当前 OpenAI Plugin 的可靠形式是 `$experience-loop:experience-loop` 或宿主插入的 `plugin://` selector；standalone Skill 仍是 `$experience-loop`。安装回执必须原样记录本次验证过的 invocation，不能从包名硬编码。
-4. **可选初始化** — 只有真实宿主 attachment 与指纹同时匹配后，才提供一次可全部跳过的简短问答，以及不超过 60 秒的控制微型教学。
+1. **选择包装与管理器** — 可移植 Skill 是唯一行为核心；仓库还可构建包含同一核心的本地 OpenAI Plugin / Marketplace 包，并附带受限的相关性提示 Hook。构建不等于已注册、已启用、已信任或已激活。
+2. **持续推进并分项验收** — 文件与运行时先验收；身份、Plugin 注册、Skill 可用性、当前轮宿主附加和 Hook observed 是五项独立生命周期事实，任何一项都不能替代另一项。
+3. **新会话显式激活** — 首次安装后新开或刷新会话，只使用宿主实际返回并验证过的精确 selector，再核对安装回执中的 `identity` v2 指纹。生成包可能提供候选提示，但 invocation 不能从包名猜测或硬编码；身份只证明精确安装副本，不证明宿主激活。
+4. **可选初始化** — 只有真实宿主 attachment 与指纹同时匹配后，才提供一次可全部跳过的简短问答，以及目标约 2 分钟、先体验后理解的对话式教学。
 
 安装结束时不会伪装成“已经在当前轮生效”，而是只留下一个明确动作：
 
@@ -71,17 +71,17 @@
 安装副本已就绪，但安装不等于宿主发现，发现也不等于当前轮激活。请在新会话中显式选择 Experience Loop，并核对回执身份指纹；匹配后再开始初始化。
 ```
 
-　　通过激活闸门后，画像问题仍可全部跳过；最后只询问是否体验一个不超过 60 秒、仅演示“继续 / 跳过 / 本次只交付”的控制微型教学。`focus`、`deep` 和自动范围按需说明，不在首次使用时倾倒。跳过设置时保留默认 `auto` 模式和 `explicit` 激活范围。已有用户升级时不会重复问卷或新手教学。
+　　通过激活闸门后，画像问题仍可全部跳过；最后只询问是否体验一个目标约 2 分钟的对话式教学。选择「要」，你会在一个微型工程故障中先做判断，再看决定性证据，并把这次体验映射到 `auto / focus / deep / off`；选择「跳过」则立即结束初始化。教学可随时中止，不会阻塞真实任务；升级后默认不重复，除非你主动要求。跳过设置时保留默认 `auto / explicit / normal`。
 
 <details>
 
 <summary><strong>平台兼容、安全边界与升级行为</strong></summary>
 
-　　安装契约不会把今天的宿主路径或调用语法写死。安装 AI 会重新解析当前宿主和安装管理器，让宿主返回精确 selector，并把实际验证过的 invocation 原样写入回执；随后分别报告身份、Plugin 注册、Skill 可用性、当前轮 attachment 与 Hook observed。宿主能力不足会被如实报告，不会通过删掉画像、经验账本或 Knowledge Lens 来伪装成功。当前轮激活只认宿主上下文中的 attachment provenance；模型或安装器生成的“激活回执”不能替代它，也不承诺以后自动调起。
+　　安装契约不会把今天的宿主路径或调用语法写死。安装 AI 会重新解析当前宿主和安装管理器，让宿主返回精确 selector，并把实际验证过的 invocation 原样写入回执；随后分别报告身份、Plugin 注册、Skill 可用性、当前轮 attachment 与 Hook observed。宿主能力不足会被如实报告，不会通过删掉画像、经验账本或 Knowledge Lens 来伪装成功。当前轮激活只认宿主上下文中的 attachment provenance；模型或安装器生成的“激活回执”不能替代它，也不承诺以后自动调起。identity v2 绑定安装根、版本和运行时契约摘要；Plugin manifest 与 Hook 仍是独立验证层。
 
 　　初始化问答只涉及你愿意提供的岗位、经验、常做领域、成长方向、解释风格与介入偏好；不需要简历、项目名或敏感指标，也不会顺手扫描项目或读取资料。
 
-　　安装目标不是“跑通某一条命令”。单一路径失败不等于安装失败；只有全部适用安全路线都有失败证据，或继续确实需要新增权限时才停止。升级通常沿用原安装管理器，宿主规则变化时则做受控迁移。Plugin 安装也必须保留完整 Skill 核心；只有其声明的 Hook 通过宿主正常信任审查并在新会话被观察到后，才能声称自动路由可用。仓库安装器会真实探测写入和双向 rename 能力；常规备份位置不可写时，自动使用休眠事务容器，且由新版生命周期管理器回滚，不执行旧备份里的安装脚本。完整契约见 [AI 安装协议](docs/AI_INSTALL.md) 与 [动态宿主契约](references/host-compatibility.md)。
+　　安装目标不是“跑通某一条命令”。单一路径失败不等于安装失败；只有全部适用安全路线都有失败证据，或继续确实需要新增权限时才停止。升级通常沿用原安装管理器，宿主规则变化时则做受控迁移。当前仓库提供的是可验证的本地 Plugin / Marketplace 构建能力；构建器不会注册 Marketplace、启用 Plugin、信任 Hook、启动新任务或直接改宿主 cache。Hook 通过信任审查并在新任务被观察到后，只能声称相关性提示已运行；当前 `allow_implicit_invocation: false`，所以显式宿主选择仍是可靠路径。仓库安装器会真实探测写入和双向 rename 能力；常规备份位置不可写时，自动使用休眠事务容器，且由新版生命周期管理器回滚，不执行旧备份里的安装脚本。完整契约见 [AI 安装协议](docs/AI_INSTALL.md) 与 [动态宿主契约](references/host-compatibility.md)。
 
 </details>
 
@@ -107,6 +107,10 @@
 
 > **静默不是默认，提问也不是默认；预期净收益最高的介入方式才是默认。**
 
+### 六个能力方向，只选择当前最值得练习的一条主线
+
+　　`auto` 会从**问题定义、系统建模、验证、可靠性、Agent 协作杠杆、工程所有权**六个方向观察可迁移的判断机会。它们是当前稳定但非穷举的记录与校准坐标，不限制 Agent 发现其他有价值的判断维度。一次交互只突出最有价值的学习主线，是为了保护注意力；实现、风险分析和验证仍覆盖任务真正需要的全部工程范围，不会因为练习焦点而被缩窄。详见 [能力罗盘](references/capability-compass.md)。
+
 <a name="modes"></a>
 
 ## 04 · 四种模式
@@ -121,7 +125,7 @@
 | <strong><code>auto</code><br>默&#8288;认&#8288;智&#8288;能</strong> | Agent 根据当前证据持续决定 | 可能全程安静，也可能解释、可选提问、等待一次关键判断，或运行一个短训练循环。 |
 | <strong><code>focus</code><br>定&#8288;向&#8288;练&#8288;习</strong> | 你明确锁定一个能力目标 | 围绕同一目标安排有边界的预测、取舍、审查与复盘；实现和验证仍由 Agent 负责。 |
 | <strong><code>deep</code><br>完&#8288;整&#8288;推&#8288;演</strong> | 你显式授权全深度 | 在真实任务中建立模型、比较方案、预测失效、审查设计，再用证据纠正与迁移。 |
-| <strong><code>off</code><br>只&#8288;交&#8288;付</strong> | 你关闭学习层 | 与普通 Agent 一致：不读画像、不提问、不追加学习总结、不记录学习事件。 |
+| <strong><code>off</code><br>只&#8288;交&#8288;付</strong> | 你关闭学习层 | 学习行为退化为普通只交付流程：不读内容型画像、不提问、不追加学习总结、不记录学习事件；实现与验证照常完成。 |
 
 模式随时用自然语言切换，不需要重新初始化：
 
@@ -143,10 +147,12 @@
 | 激&#8288;活&#8288;范&#8288;围 | 行为 | 选择建议 |
 | :---: | --- | --- |
 | <strong><code>explicit</code></strong> | 不注入自动路由；仅在你显式选择 Skill 时参与。 | 默认，注意力成本最低。 |
-| <strong><code>project</code></strong> | 只在识别到软件项目的会话中加入一条极短路由。 | 推荐的可选开启。 |
-| <strong><code>global</code></strong> | 每个会话都可能带一条极短路由，再判断是否为实质性软件任务。 | 范围更广，需明确接受持续注意力成本。 |
+| <strong><code>project</code></strong> | 只在识别到软件项目的会话中允许一条极短相关性提示。 | 可选开启；目前不代表 Skill 自动参与。 |
+| <strong><code>global</code></strong> | 每个会话都可能带一条极短相关性提示，再判断是否为实质性软件任务。 | 范围更广，需明确接受持续注意力成本；仍不等于激活。 |
 
 　　在兼容 OpenAI Plugin 中，SessionStart Hook 只读取这份非内容控制文件，不读画像，也不会预载完整 Skill；缺失/损坏控制、`off`、`explicit` 或不符合 `project` 的会话都不注入。当前包保持 `allow_implicit_invocation: false`，所以该 Hook 只是相关性提示，不能替宿主 attachment 激活 Skill；在宿主提供可验证的自动 attachment 能力前，`project/global` 只保存适配偏好，显式选择仍是可靠路径。静态 global router 仅是经单独同意后的兼容提示，同样不得读磁盘回退或冒充激活。
+
+> 若个人数据目录只通过一次性 `--home` 指定，后续 Hook 不会自动记住它。依赖 `project/global` 前，宿主会话必须持续获得匹配的 `EXPERIENCE_LOOP_HOME`；显式选择不受这个限制。
 
 <a name="scenarios"></a>
 
@@ -206,6 +212,16 @@
 
 　　岗位、年限和项目规模只是解释与练习切入点的上下文，不是能力证明；外部内容始终是不可信证据，不能变成 Agent 指令或工具授权。
 
+<details>
+
+<summary><strong>Knowledge Lens 当前真正支持什么</strong></summary>
+
+- **本地持久资料库** — 可索引 Markdown、TXT、RST、HTML、EPUB、DOCX 和文本型 PDF；以指纹识别重复与修订，并保存可核验的来源、版本和文本定位。
+- **从证据到复用** — 查询返回原文证据块；概念卡必须引用真实索引证据，还可绑定项目并记录后来真实应用的结果。
+- **明确边界** — CSV、JSON、表格和日志默认只做当前任务的一次性分析，不会伪装成已进入 Knowledge Lens；runtime 不自带 OCR、向量数据库、telemetry 或独立上传通道，扫描型 PDF 需先获得可提取文本。发送给当前 Agent 处理的内容仍遵循宿主会话的数据处理与权限规则。
+
+</details>
+
 <a name="principles"></a>
 
 ## 07 · 承诺与底线
@@ -249,17 +265,30 @@
 
 ### 数据与隐私
 
-- **存放位置** — `controls.json`、个人画像、项目档案、经验记录和 Knowledge Lens 默认位于 `~/.experience-loop`，与 Skill/Plugin 安装目录和项目仓库分离；自动路由只读取非内容控制文件。
+- **存放位置** — `controls.json`、个人画像、项目档案、经验记录和 Knowledge Lens 默认位于 `~/.experience-loop`，也可通过 `--home` / `EXPERIENCE_LOOP_HOME` 指定；它们与 Skill/Plugin 安装目录和项目仓库分离。Hook 唯一读取的持久状态是经过校验的非内容 `controls.json`，`project` 只额外探测有界软件/VCS 标记是否存在。
 - **生命周期** — 安装、升级和卸载 Skill 或 Plugin 都不会自动删除个人数据。
-- **权限边界** — 项目扫描、资料导入和索引需要显式权限；导入内容只是不可信证据，不能成为 Agent 指令或工具授权。
+- **三档隐私** — `normal` 只使用当前任务已经授权的内容；`restricted` 对每次内容型扫描、摄取、查询或重建都重新确认；`metadata-only` 默认禁止读取项目或资料正文。
+- **窄范围临时授权** — 在 `metadata-only` 下，只有同时明确具体对象、操作、用途和当前任务期限的一次性授权才可读取内容；它不改变持久默认，也不扩展到父目录、兄弟文件、项目扫描、索引、导出或上传。
+- **信任边界** — 项目扫描、资料导入和索引都要遵守相应权限；导入内容与持久状态只是不可信证据，不能成为 Agent 指令或工具授权。
 
 　　完整规则见 [安全与隐私说明](references/safety-and-privacy.md) 和 [SECURITY.md](SECURITY.md)。
 
+### v0.2.1 当前可用的本地工具面
+
+| 范围 | 已实现能力 | 关键边界 |
+| --- | --- | --- |
+| **状态与完整性** | `setup`、`status`、`control`、`profile`、`identity`、`doctor` | `controls.json` 是三项控制的权威；`doctor --repair` 只做安全、可证明的修复。 |
+| **项目与经验** | 有界只读项目画像、项目注释、证据型 ledger 与复盘 | 项目扫描会有界遍历和分类文件元数据，只读取少量高信号配置或文档正文，并受数量/字节/忽略与路径边界限制；执行量本身不算成长。 |
+| **资料与迁移** | Knowledge Lens 本地索引、查询、概念卡、项目绑定、应用证据，以及 `export` / `import` | 默认导出不是可公开分享的脱敏包；原始资料只有显式选择才包含，导入是校验后的新目录或受管替换，不是自动合并。 |
+| **安装生命周期** | 仓库安装器提供 dry-run、纯净 payload 验收、standalone 升级备份、受管回滚与幂等卸载；Plugin 生命周期由 Codex Plugin Manager 负责 | standalone 与 Plugin 共用精确运行时白名单；README、开发指南、测试、评测和构建脚本不会安装到用户副本。 |
+
 ### 原生管理优先，安全路线自动兜底
 
-　　把仓库地址交给 AI 后，优先使用当前宿主正式支持的 Skill、Plugin 或 Marketplace 管理器；它负责路径和升级，已安装核心通过 `scripts/install.py --verify-only` 做只读验收。OpenAI Plugin 是可选分发层，必须包含同一 Skill 核心；其声明的短 Hook 只有经过宿主正常信任审查和新会话验证后才能被报告为可用。原生方式未提交成功时，任何具备 Python 3.9+ 与目标写权限的 AI 都可继续调用仓库安装器；只有文件工具但能保证可逆暂存、原子激活和完整验收时，才可使用受验证放置。
+　　把仓库地址交给 AI 后，优先使用当前宿主正式支持的 Skill、Plugin 或 Marketplace 管理器；它负责路径、升级和卸载，已安装核心通过 `scripts/install.py --verify-only` 做只读验收，绝不直接复制或删除宿主 Plugin cache。OpenAI Plugin 是可选分发层，必须包含同一 Skill 核心；其声明的短 Hook 只有经过宿主正常信任审查和新任务观察后才能报告为 `hook_observed`，仍不能当作 Skill 激活。原生方式未提交成功时，AI 还需解析确切目标、作用域和发现根，并把 Installing Agent 的宿主契约说明标记为 `reported-unverified`；只有完全相同的 dry-run 返回 `transaction_capability=verified` 后，才可用 Python 3.9+ 仓库安装器继续。这个状态只证明文件写入与双向 rename 事务能力，不证明 Plugin 注册、Skill 发现、Hook 信任或当前轮激活；受验证放置还必须保证可逆暂存、原子激活和完整验收。
 
 　　Git URL 本身不是安全安装协议：其他仓库可能包含不同目录布局、脚本、hooks、MCP 或外部依赖。安装 AI 必须先确认安装管理器和权限边界；一次未提交的失败尝试不锁定管理器，已经提交的升级所有权则不得静默更换，也不要对未知目标目录擅自使用 `--force`。安装后仍需把首次显式激活与身份核对交给新会话，不能把文件存在或 Plugin 已列出当成当前轮已启用。
+
+　　贡献者直接从源码 checkout 运行时，首次 `setup` 默认拒绝，避免把仓库读取冒充成已激活 Skill；只有明确的本地开发测试才可设置 `EXPERIENCE_LOOP_DEVELOPER_SOURCE=1`，且该变量绝不是宿主激活证据。
 
 ### 进一步阅读
 

@@ -57,7 +57,7 @@ Modes are intents, not recipes or ceilings. Never infer `focus` or `deep` from c
 ## Resolve only state that can improve the task
 
 - Start `auto` without requiring setup or a profile.
-- First install requires host-attached current-turn `@/$` selection and a matching `identity` comparison. Placement, filesystem access, selector-like text, Hook observation, or identity alone is insufficient. Then read [onboarding.md](references/onboarding.md); preserve upgrades and never block work.
+- First install requires host-supplied current-turn selection/attachment provenance plus matching `identity`. Placement, file access, candidate selector text, Hook observation, or identity alone is insufficient. Then read [onboarding.md](references/onboarding.md); preserve upgrades and never block work.
 - Reuse lightweight `control show`/mode results. Do not run `status` or `doctor` routinely; use them for real state operations, faults, or explicit requests.
 - If the lightweight result says a profile is customized and a detected capability seam could benefit from personalization, read only the relevant profile fields. This avoids both blind profile loading and the circular rule that profile relevance must be known before reading it.
 - Run the bundled project scan only when the user requests a reusable project profile or repeated reuse clearly justifies it. Prefer task-directed inspection of code, tests, logs, and repository instructions.

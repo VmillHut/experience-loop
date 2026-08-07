@@ -4,6 +4,20 @@ All notable user-facing changes to this project are documented here. The format 
 
 ## [Unreleased]
 
+## [0.2.1] - 2026-08-07
+
+### Changed
+
+- Restored the opt-in onboarding tutorial as an experiential conversation targeting roughly two minutes: the user predicts in a compact engineering scenario before decisive evidence is revealed, receives an evidence-bounded comparison, then sees only the smallest useful mode and control mapping.
+- Updated the bilingual README to match the actual control, identity, Plugin, privacy, project-scan, Knowledge Lens, archive, doctor, and standalone lifecycle boundaries in the runtime.
+- Generalized first-activation guidance to require the exact selector or attachment provenance returned by the live host instead of treating package candidate strings or `@/$` characters as universal activation syntax.
+
+### Fixed
+
+- Made tutorial exit semantics literal: “skip,” delivery-only, `off`, or an urgent real task ends or defers teaching immediately, while upgrade onboarding remains suppressed unless the user requests it.
+- Strengthened the tutorial's cache-isolation evidence so the stated root cause follows from tenant-scoped IDs, a shared cache entry, alternating requests, and correct primary/replica reads rather than from an incomplete key example alone.
+- Clarified that Installing-Agent host notes are `reported-unverified`, filesystem transaction verification is not host registration or activation, Hook observation is only a relevance hint, and Codex Plugin lifecycle remains owned by the Plugin Manager.
+
 ## [0.2.0] - 2026-08-07
 
 ### Added

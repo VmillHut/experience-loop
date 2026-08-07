@@ -32,7 +32,7 @@ existing Skill registry, and current official documentation when needed to resol
   OpenAI Plugin that contains it;
 - a short host label and whether the target is user, project, or custom scope;
 - the exact Skill target directory used by this host now;
-- the exact explicit invocation or equivalent selector that the host actually verified and returned; for the current OpenAI Plugin this is `$experience-loop:experience-loop` or a host-inserted `plugin://` selector, while a standalone Skill remains `$experience-loop`;
+- the exact explicit invocation or equivalent selector that the host actually verified and returned; package metadata may expose candidate forms such as `$experience-loop:experience-loop`, `plugin://...`, or `$experience-loop`, but no candidate is evidence until the current host returns and verifies it;
 - the current reload or session-refresh action;
 - for a Plugin Hook, the host's trust-review state and how a later session proves
   that the declared Hook actually ran;

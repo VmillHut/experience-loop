@@ -266,8 +266,8 @@ class ActivationPolicyTests(unittest.TestCase):
         )
 
         self.assertIn("explicit request, then saved default, then `auto`", skill)
-        self.assertIn("First install requires host-attached current-turn `@/$` selection", skill)
-        self.assertIn("selector-like text", skill)
+        self.assertIn("First install requires host-supplied current-turn selection/attachment provenance", skill)
+        self.assertIn("candidate selector text", skill)
         self.assertIn("filesystem read", skill)
         self.assertIn("Never read `SKILL.md` as a fallback", skill)
         self.assertIn("Never create or accept a model-authored activation token", skill)

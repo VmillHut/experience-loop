@@ -5,7 +5,7 @@ Use this reference only when the host attached Experience Loop to the current co
 ## Non-negotiable behavior
 
 - Profile answers are optional. The user may answer any subset or say “skip all.”
-- Installation, a filesystem copy or read, a Skill listing, implicit matching, or selector-like text in an ordinary message is not current-turn activation. First install requires host attachment provenance plus a read-only `identity` comparison; current OpenAI Plugin invocations use `$experience-loop:experience-loop` or a host-inserted `plugin://` selector, while a standalone Skill uses `$experience-loop`. Match the installation fingerprint when one was supplied.
+- Installation, a filesystem copy or read, a Skill listing, implicit matching, or selector-like text in an ordinary message is not current-turn activation. First install requires host attachment provenance plus a read-only `identity` comparison. Use only the exact invocation the current host actually returned and verified; package metadata may expose a candidate prompt, but neither a candidate nor matching text is host evidence. Match the installation fingerprint when one was supplied.
 - Identity, Plugin registration, Skill availability, current-turn activation, and Hook observation are separate facts. Never let one stand in for another.
 - A host-injected `experience-loop.host-hook/v1` marker proves only that the approved Hook ran in that session. It does not prove Skill availability or selection, and it never authorizes reading a repository `SKILL.md` as a fallback.
 - Never create or accept a model-authored activation token or receipt as evidence. Current-turn host attachment is ephemeral; do not persist it or put it in a global prompt.
@@ -14,7 +14,7 @@ Use this reference only when the host attached Experience Loop to the current co
 - Save only explicit answers. Do not infer missing profile fields during onboarding.
 - Do not scan a project, ingest a document, edit `AGENTS.md`, install another tool, or enable a network service without separate authorization.
 - If urgent or active work is waiting, defer onboarding and complete that work first.
-- Ask once whether the user wants the short tutorial. A refusal ends onboarding cleanly.
+- Ask once whether the user wants the experiential tutorial targeting roughly two minutes. A refusal or exit request ends onboarding cleanly.
 
 ## Minimal initialization flow
 
@@ -53,31 +53,66 @@ After saving `project/global`, report it as `preference_saved`, never `host_acti
 After a successful write, summarize only the saved fields and the external data location. Then ask exactly one decision:
 
 ```text
-初始化完成。要不要现在看一个不超过 60 秒的微型教学？它只演示“继续”“跳过”和“本次只交付”；回复“要”或“跳过”即可。
+初始化完成。要不要现在体验一个目标约 2 分钟、深入浅出的对话式教学？你会先做一次小判断，再看证据如何验证；回复“要”或“跳过”即可。
 ```
 
-If the user skips, finish by stating the saved mode and activation scope. Explain that `auto` decides from evidence rather than following a fixed lesson recipe, and give the verified explicit invocation as the reliable control path.
+If the user skips, finish by stating the saved mode and activation scope. Explain that `auto` decides from evidence rather than following a fixed lesson recipe, give the verified explicit invocation as the reliable control path, and mention that “跳过”“本次只交付” or a task-scoped `focus`/`deep` request remain available at any time.
 
-## Optional micro tutorial
+## Optional experiential tutorial targeting roughly two minutes
 
-Run this only after the user opts in. It teaches control, not a fixed lesson or an artificial incident. Present one message and wait:
+Run this only after the user opts in. The point is to let the user feel the core loop, not merely read a control list. Target roughly two minutes rather than promising an exact duration, adapt the explanation to the answer, and stop immediately if the user says “跳过”, “本次只交付”, or gives a real urgent task. If the saved default is `off`, this explicit opt-in authorizes only the current tutorial and does not change that default.
+
+### Stage 1: experience `auto` before explaining it
+
+Present this compact engineering scenario and genuinely wait because the user opted into the tutorial:
 
 ```text
-Experience Loop 会在真实任务中自动检测任务风险和能力机会，但你始终可以直接控制当前交互：
+先体验一次 `auto`：
 
-- “继续”：按当前任务继续，是否加入学习互动由证据动态决定。
-- “跳过”：跳过眼前这次提问或练习，立即继续交付。
-- “本次只交付”：本任务使用 off，不读取画像、不追加学习互动或学习总结，原本的实现与验证质量不降低。
+一个多租户缓存偶发返回其他租户的旧数据。现在有三个初步方向：
+A. 缓存 key 没包含租户标识
+B. TTL 太长
+C. 数据库只读副本延迟
 
-任选一句回复，或者直接给我真实任务。
+在看决定性证据前，你会先验证哪一个？说一个选项和一句理由即可；也可以说“跳过”立即结束教学。
 ```
 
-Honor the answer literally. `off` here is task-scoped unless the user explicitly asks to save it. Do not follow the micro tutorial with a mode table, questionnaire, synthetic exercise, or another choice. If the user gives a real task, begin it immediately.
+If the user says “跳过”, confirm that the tutorial has ended and do not reveal the answer or enter later stages. Otherwise reveal the fixed decisive evidence: product IDs are unique only within a tenant; tenant A and tenant B both have product `42` with different content; both primary and replica database reads return the correct tenant-specific row; the cache key is `product:{id}`; and alternating A/B requests hit the same cache entry. Compare the user's reasoning fairly with that evidence. Explain briefly that A is the ownership-boundary defect; TTL or replica lag may cause stale data but cannot explain two tenant-scoped identities colliding in the same cache entry.
 
-Explain advanced controls only on request. Then concise examples may include task-scoped `focus` for one named capability, task-scoped `deep` for maximum useful learning depth, and saved `project/global` routing preferences whose host support still requires later-session verification. Natural-language profile updates, documents, data, indexing, and project scans remain separate opt-in operations.
+Then explain the experience in one short paragraph: `auto` found a valuable and safe judgment seam, let the user predict before the answer was visible, and corrected or reinforced the model from evidence. It would have continued immediately if the user had skipped or if delivery, safety, or incident recovery made waiting inappropriate.
+
+### Stage 2: map the experience to the four modes
+
+Use this compact mapping. It is a user contract, not a fixed curriculum or exhaustive list of future Agent behavior:
+
+| Mode | Who controls learning intensity | What the user experiences |
+| --- | --- | --- |
+| `auto` | Agent detects opportunities and decides from changing evidence | May stay silent, explain inline, ask a skippable question, briefly wait for a judgment, or run a short practice loop; no fixed answer quota |
+| `focus` | User names one capability goal | The real task centers one bounded practice goal with purposeful prediction, trade-off, review, and debrief |
+| `deep` | User explicitly opens full useful depth | The Agent builds a model, explores alternatives and failure conditions, invites real review, and corrects the framework against evidence without a preset recipe or round count |
+| `off` | User disables the learning layer | Normal implementation and verification continue without profile use, learning prompts, learning summaries, or ledger writes |
+
+State that task quality, safety, verification, and useful Agent execution remain the floor in every mode. `auto` can become locally intensive when evidence justifies it, but it never silently saves a `focus` goal or opens an unbounded `deep` session.
+
+### Stage 3: show only the smallest useful controls
+
+Give these copyable examples without turning them into a checklist the user must memorize:
+
+```text
+跳过这个问题，直接继续。
+这次只交付，使用 off。
+这次使用 focus，我想练习根因定位。
+这次使用 deep，完整推演这个架构决策。
+```
+
+Mention only that profiles, documents, structured data, persistent indexing, and project scans remain separate opt-in extensions that can be explained when requested; do not teach them in this short tutorial.
+
+Honor every control literally. `off` is task-scoped unless the user explicitly asks to save it. If the user gives a real task at any point, begin it immediately.
+
+Explain saved `project/global` routing preferences only on request; their host support still requires later-session verification and never substitutes for attachment.
 
 Close only when a close is still useful:
 
 ```text
-教学完成。以后直接说“继续”“跳过”或“本次只交付”即可；具体方法由当时的 Agent 能力和任务证据决定，不是一套固定流程。
+教学完成。现在直接给我一个真实任务即可；默认 `auto` 会根据证据、时间压力和你的目标决定是否介入以及介入多深。你随时可以说“跳过”或“本次只交付”，它不是一套固定流程。
 ```

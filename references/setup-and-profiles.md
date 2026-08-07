@@ -37,7 +37,7 @@ The user may answer any subset in natural language. Save only what was actually 
 2. Confirm that every profile answer is optional, then ask the concrete profile questions in one compact message rather than a settings menu.
 3. Run `setup` once with only the answered fields. It is the only public command that may create first-run state; `control set` and `mode <value>` require an initialized HOME. If the user skips all fields, run default setup without inventing answers. Show the resolved external data location and report only that local state was initialized, with `host_activation=not_evaluated`.
 4. Do not scan a project, ingest a document, edit Agent instructions, or enable external services during onboarding unless the user explicitly authorizes that separate operation.
-5. Ask whether the user wants the fixed short usage tutorial. Run it only after consent.
+5. Ask whether the user wants the experiential tutorial targeting roughly two minutes. Run it only after consent: let the user predict in a tiny engineering scenario before revealing decisive evidence, then map the experience briefly to the controls. Keep it skippable, interruptible, and adaptive rather than a fixed course. An explicit tutorial opt-in under a saved `off` default is task-local and does not persist a mode change.
 6. If the user arrived with urgent or active work, defer onboarding and execute the task first.
 7. Later profile changes may arrive as one natural-language sentence; update only the changed fields.
 8. Keep activation scope separate from mode. Default to `explicit`; offer `project` only as a narrower optional preference. Treat `global` as broader attention cost requiring explicit consent.
@@ -60,7 +60,7 @@ Keep runtime state outside the installed Skill and source repositories. Resolve 
 2. `EXPERIENCE_LOOP_HOME` environment variable;
 3. runtime default for the current user.
 
-An explicit `--home` applies only to that command. Once a custom home is chosen, the Agent must reuse it for `setup`, `status`, `doctor`, and later lifecycle checks, or keep the same `EXPERIENCE_LOOP_HOME` in scope. For `project/global` automatic routing, persist that matching environment variable for later host sessions; the Hook cannot discover controls from an earlier one-off `--home`. Treat a machine-readable `adapter.requirement` from `setup/control` as an unresolved host-adapter prerequisite. Explicit invocation remains available without it. Do not run an unqualified status against the default home and conclude that a customized home is uninitialized.
+An explicit `--home` applies only to that command. Once a custom home is chosen, the Agent must reuse it for `setup`, `status`, `doctor`, and later lifecycle checks, or keep the same `EXPERIENCE_LOOP_HOME` in scope. For `project/global` routing hints, persist that matching environment variable for later host sessions; the Hook cannot discover controls from an earlier one-off `--home`. Treat a machine-readable `adapter.requirement` from `setup/control` as an unresolved host-adapter prerequisite. Explicit invocation remains available without it. Do not run an unqualified status against the default home and conclude that a customized home is uninitialized.
 
 The logical layout is:
 

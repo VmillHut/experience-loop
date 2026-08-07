@@ -15,7 +15,7 @@ from typing import Any, Dict, Iterator, Optional, Sequence, Tuple
 
 
 APP_NAME = "experience-loop"
-VERSION = "0.2.0"
+VERSION = "0.2.1"
 SCHEMA_VERSION = 1
 
 EXIT_OK = 0

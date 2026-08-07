@@ -38,7 +38,7 @@ class VerifyReleaseTests(unittest.TestCase):
         self.assertEqual(verify_release.check_skill(ROOT), [])
         self.assertEqual(verify_release.check_openai_metadata(ROOT), [])
         self.assertEqual(verify_release.check_version_consistency(ROOT), [])
-        self.assertEqual(verify_release.check_tag_consistency("v0.2.0", ROOT), [])
+        self.assertEqual(verify_release.check_tag_consistency("v0.2.1", ROOT), [])
         self.assertEqual(verify_release.check_publish_placeholders(ROOT), [])
         self.assertEqual(verify_release.check_vendor(ROOT), [])
 
