@@ -1,9 +1,12 @@
 <div align="center">
-  <img src="assets/icon-large.svg" alt="Experience Loop" width="620">
+  <img src="assets/icon-small.svg" alt="" width="56">
+  <h1>Experience Loop</h1>
 
   <p style="font-size: 1.2em"><strong>You can delegate the code. Do not outsource your judgment with it.</strong></p>
   <p><strong style="color:#0F766E">It strengthens your judgment, not the Agent's.</strong></p>
   <p style="color:#64748B">The task is still delivered at full quality; Experience Loop only keeps the engineering judgments that truly matter with you, and uses real evidence to make them more accurate over time.</p>
+
+  <img src="assets/readme-hero.svg" alt="Abstract Experience Loop visual connecting a task, Agent execution, evidence, and human judgment" width="100%">
 
   <p>
     <a href="https://github.com/VmillHut/experience-loop/actions/workflows/ci.yml"><img src="https://github.com/VmillHut/experience-loop/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
@@ -24,12 +27,6 @@
   </p>
 </div>
 
-<br>
-
-<div align="center">
-  <img src="assets/readme-loop.svg" alt="A normal Agent workflow only finishes the task; Experience Loop also preserves judgment, acceptance, reflection, and transferable experience" width="100%">
-</div>
-
 ## Understand it in 30 seconds
 
 First, one thing straight: **this is not a Skill that makes your Agent stronger—it makes you stronger.** AI writes your code, runs your tests, and reads your docs. But the most valuable parts of engineering are getting harder and harder to outsource:
@@ -48,6 +45,10 @@ Experience Loop does not turn real work into a course, and it does not make you 
 | **🛡️ Delivery always comes first** | The learning layer only adds; it never subtracts. Task quality, verification, safety, and delivery speed are never lowered, and the Agent's core job still gets done. |
 | **🎯 Detect first, then decide** | The default `auto` mode has no fixed script: the Agent watches the task evidence in real time to see whether a risk is activated or a judgment is worth keeping with you, then decides to stay quiet, explain, ask, or run a short practice loop. |
 | **📊 Evidence speaks** | Only verifiable predictions, judgments corrected by evidence, real outcomes, and later transfer count as growth. Longer conversations and successful code generation do not. |
+
+<div align="center">
+  <img src="assets/readme-loop.en.svg" alt="A top lane that only ships work and a lower Experience Loop lane that preserves judgment, evidence, reflection, and reusable experience" width="100%">
+</div>
 
 In one sentence: **the Agent delivers, the judgment is yours—every real task grows your judgment.**
 
@@ -77,20 +78,9 @@ Say yes, and you experience "judge first, then inspect the evidence" once in a r
 
 `auto` is not "interrupt less" mode, and it is not "ask more" mode. It is a small radar running alongside the task, working as the evidence changes:
 
-```text
-Task progresses
-  ├─ 1. Which risks did this change actually activate?
-  │       boundaries / coupling / concurrency / compatibility / recovery...
-  │       read the real evidence, don't recite a universal checklist
-  ├─ 2. Is there a judgment worth keeping with the human?
-  │       it tests your experience, and later evidence can validate it
-  └─ 3. Is now a good time to intervene?
-          is there delivery pressure? can we afford to wait?
-
-Then pick the response with the highest expected value:
-  silent execution → embedded explanation → optional checkpoint →
-  required judgment checkpoint → short practice loop
-```
+<div align="center">
+  <img src="assets/readme-auto.en.svg" alt="auto selects a response from live task evidence, the value of a human judgment, and whether it is the right moment to intervene" width="100%">
+</div>
 
 These five responses are examples, not a closed menu, and `auto` has no preset "required answers" or ceiling of "at most N checkpoints." **Silence is only one possible intelligent result, not the default**—it picks the option with the highest expected net value and prefers the less disruptive one only when the expected value is otherwise close.
 

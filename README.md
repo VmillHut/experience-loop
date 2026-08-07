@@ -1,9 +1,12 @@
 <div align="center">
-  <img src="assets/icon-large.svg" alt="Experience Loop" width="620">
+  <img src="assets/icon-small.svg" alt="" width="56">
+  <h1>Experience Loop</h1>
 
   <p style="font-size: 1.2em"><strong>代码可以交给 Agent，判断力不能一起外包。</strong></p>
   <p><strong style="color:#0F766E">它提升的不是 Agent 的能力，而是你的判断力。</strong></p>
   <p style="color:#64748B">任务照常由 Agent 高质量完成；Experience Loop 只在真正值得的节点，把工程判断留给你，用真实证据让它越练越准。</p>
+
+  <img src="assets/readme-hero.svg" alt="由任务、Agent 执行、证据和人的判断构成的 Experience Loop 抽象主视觉" width="100%">
 
   <p>
     <a href="https://github.com/VmillHut/experience-loop/actions/workflows/ci.yml"><img src="https://github.com/VmillHut/experience-loop/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
@@ -24,12 +27,6 @@
   </p>
 </div>
 
-<br>
-
-<div align="center">
-  <img src="assets/readme-loop.svg" alt="普通 Agent 工作流只完成任务；Experience Loop 在交付同时保留判断、验收、复盘和迁移经验" width="100%">
-</div>
-
 ## 30 秒看懂它
 
 先分清一件事：**这不是让 Agent 变强的 Skill，是让你变强的 Skill。** AI 会替你写代码、跑测试、翻文档——但工程里最值钱的部分，正在越来越难外包：
@@ -48,6 +45,10 @@ Experience Loop 不把真实任务改造成一门课程，也不逼你手写本�
 | **🛡️ 交付永远第一** | 学习层只做加法，不做减法：任务质量、验证、安全和交付效率一律不降级，Agent 的本职工作照常完成。 |
 | **🎯 先检测，再决定** | 默认 `auto` 不做固定套路：Agent 随任务证据实时判断有没有风险被激活、有没有值得留给人的判断，再决定安静、解释、提问，还是跑一次短训练循环。 |
 | **📊 证据说话** | 只有可验证的预测、被证据纠正的判断、真实结果和后来的迁移才算能力增长。聊天变长、代码生成成功，都不算。 |
+
+<div align="center">
+  <img src="assets/readme-loop.zh.svg" alt="上方展示只完成任务的线性流程；下方展示 Experience Loop 在交付中保留判断、验收、复盘和可迁移经验" width="100%">
+</div>
 
 一句话：**Agent 负责交付，判断力归你——每一次真实任务，都在增长你的判断力。**
 
@@ -77,18 +78,9 @@ Experience Loop 不把真实任务改造成一门课程，也不逼你手写本�
 
 `auto` 不是「少打扰」模式，也不是「多提问」模式。它是任务进行中的一个小雷达，随证据变化持续工作：
 
-```text
-任务推进
-  ├─ 1. 这次改动真正激活了哪些风险？
-  │       边界 / 耦合 / 并发 / 兼容 / 恢复……看实际证据，不背通用清单
-  ├─ 2. 有没有一个值得保留给人的判断？
-  │       它考验你的经验，且结果能被后续证据验证
-  └─ 3. 现在是介入的好时机吗？
-          交付压力大不大？等得起吗？
-
-然后选择预期收益最高的一种响应：
-  静默执行 → 嵌入解释 → 可选检查点 → 必答判断检查点 → 短训练循环
-```
+<div align="center">
+  <img src="assets/readme-auto.zh.svg" alt="auto 依据真实任务证据、判断价值和介入时机选择静默执行、解释、检查点或短训练循环" width="100%">
+</div>
 
 这五种响应是示例，不是限制未来的封闭菜单；`auto` 没有「必答几个问题」的预设，也没有「最多几个检查点」的上限。**静默只是智能决策的一种可能结果，不是默认值**——它会选择预期净收益最高的方式，只有几种方式收益接近时，才优先选更少打断的那一种。
 

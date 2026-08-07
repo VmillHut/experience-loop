@@ -1,0 +1,146 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1500 660" role="img" aria-labelledby="title desc">
+  <title id="title">同样完成任务，两种不同结果</title>
+  <desc id="desc">上方是只完成任务的线性工作流；下方是 Experience Loop 在高价值节点把判断、证据、复盘与迁移留下的回路。</desc>
+  <defs>
+    <linearGradient id="surface" x1="70" y1="0" x2="1430" y2="660" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#0A1221"/>
+      <stop offset=".5" stop-color="#111C33"/>
+      <stop offset="1" stop-color="#091524"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="160" y1="435" x2="1350" y2="570" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#21CBB7"/>
+      <stop offset=".52" stop-color="#4CA6FF"/>
+      <stop offset="1" stop-color="#726CFF"/>
+    </linearGradient>
+    <linearGradient id="result" x1="1160" y1="400" x2="1360" y2="545" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#25CDB8"/>
+      <stop offset="1" stop-color="#6673FF"/>
+    </linearGradient>
+    <linearGradient id="topCard" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#18263C"/>
+      <stop offset="1" stop-color="#101A2C"/>
+    </linearGradient>
+    <linearGradient id="bottomCard" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#173143"/>
+      <stop offset="1" stop-color="#132440"/>
+    </linearGradient>
+    <filter id="shadow" x="-30%" y="-45%" width="160%" height="200%">
+      <feDropShadow dx="0" dy="12" stdDeviation="13" flood-color="#020617" flood-opacity=".42"/>
+    </filter>
+    <filter id="glow" x="-55%" y="-90%" width="210%" height="280%">
+      <feGaussianBlur stdDeviation="14"/>
+    </filter>
+    <marker id="arrowMuted" markerWidth="11" markerHeight="11" refX="8" refY="5.5" orient="auto">
+      <path d="M1 1L9 5.5L1 10" fill="none" stroke="#7890AE" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    </marker>
+    <marker id="arrowAccent" markerWidth="11" markerHeight="11" refX="8" refY="5.5" orient="auto">
+      <path d="M1 1L9 5.5L1 10" fill="none" stroke="#69E7D6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    </marker>
+  </defs>
+
+  <rect width="1500" height="660" rx="36" fill="url(#surface)"/>
+  <path d="M54 100H1446" stroke="#9CB3D0" stroke-opacity=".14"/>
+  <text x="58" y="65" fill="#F8FAFC" font-family="Inter, Segoe UI, Microsoft YaHei, PingFang SC, sans-serif" font-size="32" font-weight="700">同样完成任务，两种不同结果</text>
+  <text x="58" y="90" fill="#8B9BB3" font-family="Inter, Segoe UI, Microsoft YaHei, PingFang SC, sans-serif" font-size="14" font-weight="600" letter-spacing="1.8">交付相同 · 判断是否沉淀，完全不同</text>
+
+  <!-- Ship only -->
+  <g filter="url(#shadow)">
+    <rect x="46" y="128" width="1408" height="194" rx="28" fill="#101A2B" stroke="#2B3A53"/>
+  </g>
+  <rect x="72" y="151" width="146" height="38" rx="19" fill="#2B1A27" stroke="#714054"/>
+  <text x="145" y="176" text-anchor="middle" fill="#FFC1CB" font-family="Inter, Segoe UI, Microsoft YaHei, PingFang SC, sans-serif" font-size="16" font-weight="700">只完成任务</text>
+  <text x="241" y="176" fill="#7C8DA6" font-family="Inter, Segoe UI, sans-serif" font-size="12" font-weight="700" letter-spacing="1.4">SHIP ONLY</text>
+  <text x="72" y="214" fill="#8292AA" font-family="Inter, Segoe UI, Microsoft YaHei, PingFang SC, sans-serif" font-size="14">流程结束，下一次仍从零开始</text>
+
+  <g font-family="Inter, Segoe UI, Microsoft YaHei, PingFang SC, sans-serif" filter="url(#shadow)">
+    <g>
+      <rect x="160" y="235" width="200" height="64" rx="18" fill="url(#topCard)" stroke="#3A5271"/>
+      <circle cx="190" cy="267" r="15" fill="#203852" stroke="#5A7CA7"/>
+      <text x="190" y="272" text-anchor="middle" fill="#DCEBFA" font-size="14" font-weight="800">1</text>
+      <text x="217" y="264" fill="#F1F6FC" font-size="19" font-weight="700">提出需求</text>
+      <text x="217" y="286" fill="#91A6C0" font-size="12" font-weight="600">REQUEST</text>
+    </g>
+    <g>
+      <rect x="410" y="235" width="200" height="64" rx="18" fill="url(#topCard)" stroke="#3A5271"/>
+      <circle cx="440" cy="267" r="15" fill="#203852" stroke="#5A7CA7"/>
+      <text x="440" y="272" text-anchor="middle" fill="#DCEBFA" font-size="14" font-weight="800">2</text>
+      <text x="467" y="264" fill="#F1F6FC" font-size="19" font-weight="700">Agent 执行</text>
+      <text x="467" y="286" fill="#91A6C0" font-size="12" font-weight="600">EXECUTE</text>
+    </g>
+    <g>
+      <rect x="660" y="235" width="200" height="64" rx="18" fill="url(#topCard)" stroke="#3A5271"/>
+      <circle cx="690" cy="267" r="15" fill="#263556" stroke="#7183B6"/>
+      <text x="690" y="272" text-anchor="middle" fill="#E3E7FF" font-size="14" font-weight="800">3</text>
+      <text x="717" y="264" fill="#F1F6FC" font-size="19" font-weight="700">测试变绿</text>
+      <text x="717" y="286" fill="#91A6C0" font-size="12" font-weight="600">GREEN CHECK</text>
+    </g>
+    <g>
+      <rect x="910" y="235" width="200" height="64" rx="18" fill="url(#topCard)" stroke="#55405B"/>
+      <circle cx="940" cy="267" r="15" fill="#402A3D" stroke="#B36981"/>
+      <text x="940" y="272" text-anchor="middle" fill="#FFD1D9" font-size="14" font-weight="800">4</text>
+      <text x="967" y="264" fill="#F7F1F4" font-size="19" font-weight="700">任务交付</text>
+      <text x="967" y="286" fill="#C397A5" font-size="12" font-weight="600">DELIVER</text>
+    </g>
+    <g>
+      <rect x="1160" y="235" width="180" height="64" rx="18" fill="#261D2A" stroke="#80465D"/>
+      <text x="1186" y="264" fill="#FBC0CC" font-size="18" font-weight="700">交付结束</text>
+      <text x="1186" y="286" fill="#B77C8D" font-size="12" font-weight="600">经验未沉淀</text>
+    </g>
+  </g>
+  <g fill="none" stroke="#7890AE" stroke-width="2.8" marker-end="url(#arrowMuted)">
+    <path d="M360 267h31"/><path d="M610 267h31"/><path d="M860 267h31"/><path d="M1110 267h31"/>
+  </g>
+
+  <!-- Experience Loop -->
+  <g filter="url(#shadow)">
+    <rect x="46" y="356" width="1408" height="248" rx="30" fill="#0B1D2A" stroke="#286662"/>
+  </g>
+  <rect x="72" y="380" width="204" height="39" rx="19.5" fill="url(#accent)"/>
+  <text x="174" y="406" text-anchor="middle" fill="#FFF" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="16" font-weight="800" letter-spacing=".4">EXPERIENCE LOOP</text>
+  <text x="300" y="405" fill="#A0BDC0" font-family="Inter, Segoe UI, Microsoft YaHei, PingFang SC, sans-serif" font-size="14" font-weight="650">遇到高价值判断时，交付与成长同步发生</text>
+  <path d="M160 498H1340" fill="none" stroke="url(#accent)" stroke-width="12" stroke-linecap="round" opacity=".2" filter="url(#glow)"/>
+  <path d="M160 498H1340" fill="none" stroke="url(#accent)" stroke-width="3.4" stroke-linecap="round"/>
+  <g fill="none" stroke="#69E7D6" stroke-width="2.9" marker-end="url(#arrowAccent)">
+    <path d="M360 498h31"/><path d="M610 498h31"/><path d="M860 498h31"/><path d="M1110 498h31"/>
+  </g>
+  <g font-family="Inter, Segoe UI, Microsoft YaHei, PingFang SC, sans-serif" filter="url(#shadow)">
+    <g>
+      <rect x="160" y="466" width="200" height="64" rx="18" fill="url(#bottomCard)" stroke="#2E9C93"/>
+      <circle cx="190" cy="498" r="15" fill="#17504E" stroke="#55D2C2"/>
+      <text x="190" y="503" text-anchor="middle" fill="#D6FFF7" font-size="14" font-weight="800">1</text>
+      <text x="217" y="495" fill="#F0FFFC" font-size="19" font-weight="700">关键判断</text>
+      <text x="217" y="517" fill="#91E5D8" font-size="12" font-weight="600">DECIDE</text>
+    </g>
+    <g>
+      <rect x="410" y="466" width="200" height="64" rx="18" fill="#123347" stroke="#3485A2"/>
+      <circle cx="440" cy="498" r="15" fill="#16465C" stroke="#64BCE0"/>
+      <text x="440" y="503" text-anchor="middle" fill="#DDF4FF" font-size="14" font-weight="800">2</text>
+      <text x="467" y="495" fill="#F1FBFF" font-size="19" font-weight="700">Agent 执行</text>
+      <text x="467" y="517" fill="#A5DDF5" font-size="12" font-weight="600">EXECUTE</text>
+    </g>
+    <g>
+      <rect x="660" y="466" width="200" height="64" rx="18" fill="#182D4B" stroke="#5A73B4"/>
+      <circle cx="690" cy="498" r="15" fill="#293B69" stroke="#8BA1E8"/>
+      <text x="690" y="503" text-anchor="middle" fill="#EAEDFF" font-size="14" font-weight="800">3</text>
+      <text x="717" y="495" fill="#F6F8FF" font-size="19" font-weight="700">证据验收</text>
+      <text x="717" y="517" fill="#C0CAF8" font-size="12" font-weight="600">VERIFY</text>
+    </g>
+    <g>
+      <rect x="910" y="466" width="200" height="64" rx="18" fill="#1D2B4F" stroke="#7378D1"/>
+      <circle cx="940" cy="498" r="15" fill="#323366" stroke="#9998F0"/>
+      <text x="940" y="503" text-anchor="middle" fill="#F0EFFF" font-size="14" font-weight="800">4</text>
+      <text x="967" y="495" fill="#FBFAFF" font-size="18" font-weight="700">复盘与迁移</text>
+      <text x="967" y="517" fill="#D1D2FF" font-size="12" font-weight="600">REFLECT + TRANSFER</text>
+    </g>
+    <g>
+      <rect x="1160" y="453" width="180" height="90" rx="23" fill="url(#result)"/>
+      <text x="1186" y="487" fill="#FFF" font-size="19" font-weight="750">任务交付</text>
+      <text x="1186" y="513" fill="#E7FFFC" font-size="14" font-weight="650">+ 可迁移经验</text>
+      <text x="1186" y="532" fill="#E0E5FF" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="10.5" font-weight="700">DELIVER + COMPOUND</text>
+    </g>
+  </g>
+  <path d="M1250 559C1050 636 454 637 246 540" fill="none" stroke="#67E6D5" stroke-width="3" stroke-linecap="round" stroke-dasharray="8 10" marker-end="url(#arrowAccent)"/>
+  <rect x="528" y="585" width="444" height="35" rx="17.5" fill="#102D37" stroke="#2B938C"/>
+  <text x="750" y="608" text-anchor="middle" fill="#A4F4E6" font-family="Inter, Segoe UI, Microsoft YaHei, PingFang SC, sans-serif" font-size="14" font-weight="650">把被证据校正过的判断，带到下一次真实任务</text>
+  <rect x="1" y="1" width="1498" height="658" rx="35" fill="none" stroke="#A8C4E8" stroke-opacity=".12" stroke-width="2"/>
+</svg>
