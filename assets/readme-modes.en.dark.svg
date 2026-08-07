@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="210" viewBox="0 0 1200 210" role="img" aria-labelledby="title desc">
+  <title id="title">The four Experience Loop modes</title>
+  <desc id="desc">auto decides from evidence, focus practices one goal, deep explores the full decision, and off keeps delivery only.</desc>
+  <g font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif" text-anchor="middle">
+    <rect x="18" y="20" width="276" height="170" rx="18" fill="#0D2526" stroke="#2DD4BF"/>
+    <path d="M46 20H266" stroke="#5EEAD4" stroke-width="4" stroke-linecap="round"/>
+    <text x="156" y="66" fill="#5EEAD4" font-size="26" font-weight="750">auto</text>
+    <text x="156" y="94" fill="#5EEAD4" font-size="13" font-weight="650" letter-spacing="1.5">DEFAULT</text>
+    <text x="156" y="137" fill="#E2E8F0" font-size="17" font-weight="600">Decides from evidence</text>
+    <text x="156" y="164" fill="#94A3B8" font-size="15">Quiet or intervene</text>
+
+    <rect x="312" y="20" width="276" height="170" rx="18" fill="#101D36" stroke="#60A5FA"/>
+    <path d="M340 20H560" stroke="#93C5FD" stroke-width="4" stroke-linecap="round"/>
+    <text x="450" y="66" fill="#93C5FD" font-size="26" font-weight="750">focus</text>
+    <text x="450" y="94" fill="#93C5FD" font-size="13" font-weight="650" letter-spacing="1.5">DELIBERATE</text>
+    <text x="450" y="137" fill="#E2E8F0" font-size="17" font-weight="600">One capability goal</text>
+    <text x="450" y="164" fill="#94A3B8" font-size="15">Bounded practice</text>
+
+    <rect x="606" y="20" width="276" height="170" rx="18" fill="#171634" stroke="#818CF8"/>
+    <path d="M634 20H854" stroke="#A5B4FC" stroke-width="4" stroke-linecap="round"/>
+    <text x="744" y="66" fill="#A5B4FC" font-size="26" font-weight="750">deep</text>
+    <text x="744" y="94" fill="#A5B4FC" font-size="13" font-weight="650" letter-spacing="1.5">FULL DEPTH</text>
+    <text x="744" y="137" fill="#E2E8F0" font-size="17" font-weight="600">Model · trade off · verify</text>
+    <text x="744" y="164" fill="#94A3B8" font-size="15">Explicitly enabled</text>
+
+    <rect x="900" y="20" width="276" height="170" rx="18" fill="#151B25" stroke="#64748B"/>
+    <path d="M928 20H1148" stroke="#94A3B8" stroke-width="4" stroke-linecap="round"/>
+    <text x="1038" y="66" fill="#CBD5E1" font-size="26" font-weight="750">off</text>
+    <text x="1038" y="94" fill="#94A3B8" font-size="13" font-weight="650" letter-spacing="1.5">DELIVERY ONLY</text>
+    <text x="1038" y="137" fill="#E2E8F0" font-size="17" font-weight="600">Learning layer off</text>
+    <text x="1038" y="164" fill="#94A3B8" font-size="15">Native quality intact</text>
+  </g>
+</svg>
