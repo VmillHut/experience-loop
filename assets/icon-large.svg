@@ -1,18 +1,1 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 220" role="img" aria-labelledby="title desc">
-  <title id="title">Experience Loop</title>
-  <desc id="desc">A delivery-first learning loop for software development</desc>
-  <defs>
-    <linearGradient id="g" x1="40" y1="34" x2="190" y2="190" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#18B6A4"/>
-      <stop offset="1" stop-color="#5568FF"/>
-    </linearGradient>
-  </defs>
-  <rect width="720" height="220" rx="32" fill="#0B1220"/>
-  <g transform="translate(20 0)">
-    <path d="M163 79a64 64 0 1 0 5 56" fill="none" stroke="url(#g)" stroke-width="16" stroke-linecap="round"/>
-    <path d="m154 49 14 29-31 3" fill="none" stroke="#18B6A4" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/>
-    <path d="m87 86-24 24 24 24M129 86l24 24-24 24" fill="none" stroke="#F8FAFC" stroke-width="11" stroke-linecap="round" stroke-linejoin="round"/>
-  </g>
-  <text x="226" y="103" fill="#F8FAFC" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="54" font-weight="700" letter-spacing="-1">Experience Loop</text>
-  <text x="230" y="146" fill="#94A3B8" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="20">Ship first. Recover the experience.</text>
-</svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 220" role="img" aria-labelledby="title desc"><title id="title">Experience Loop</title><desc id="desc">A delivery-first learning loop for software development</desc><defs><linearGradient id="g" x1="40" y1="34" x2="190" y2="190" gradientUnits="userSpaceOnUse"><stop stop-color="#18B6A4"/><stop offset="1" stop-color="#5568FF"/></linearGradient></defs><rect width="720" height="220" rx="32" fill="#0B1220"/><g transform="translate(20 0)"><path d="M163 79a64 64 0 1 0 5 56" fill="none" stroke="url(#g)" stroke-width="16" stroke-linecap="round"/><path d="m154 49 14 29-31 3" fill="none" stroke="#18B6A4" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/><path d="m87 86-24 24 24 24M129 86l24 24-24 24" fill="none" stroke="#F8FAFC" stroke-width="11" stroke-linecap="round" stroke-linejoin="round"/></g><text x="226" y="103" fill="#F8FAFC" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="54" font-weight="700" letter-spacing="-1">Experience Loop</text><text x="230" y="146" fill="#94A3B8" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="20">Ship first. Recover the experience.</text></svg>

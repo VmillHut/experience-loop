@@ -12,17 +12,21 @@ import sys
 from typing import Optional
 
 from install import (
+    DORMANT_SKILL_MANIFEST,
     _move_to_backup,
     _same_path,
-    backup_root_for_target,
+    activate_parked_skill_manifest,
     ensure_no_other_discoverable_install,
     managed_install_validation_error,
     migrate_legacy_sibling_backups,
     normalized_stored_host_contract,
     other_discoverable_installations,
     planned_legacy_sibling_backups,
+    park_skill_manifest,
     read_marker,
     restore_legacy_sibling_backups,
+    select_transaction_root,
+    stored_transaction_root,
     validate_discovery_root,
     validate_target_path,
     validated_contract_text,
@@ -47,6 +51,7 @@ def parse_args() -> argparse.Namespace:
         ),
     )
     parser.add_argument("--target", type=Path, default=default_target())
+    parser.add_argument("--transaction-root", type=Path)
     parser.add_argument("--discovery-root", action="append", type=Path, default=[])
     parser.add_argument("--affected-host", action="append", default=[])
     parser.add_argument("--yes", action="store_true", help="Confirm removal.")
@@ -184,7 +189,23 @@ def main() -> int:
                 migrated: list[tuple[Path, Path]] = []
                 try:
                     if args.yes:
-                        migrated = migrate_legacy_sibling_backups(target)
+                        transaction_root, attempts = select_transaction_root(
+                            target,
+                            discovery_roots,
+                            requested=args.transaction_root,
+                        )
+                        if transaction_root is None:
+                            rendered = "; ".join(
+                                f"{attempt['path']}: {attempt['error']}"
+                                for attempt in attempts
+                            )
+                            raise RuntimeError(
+                                "No safe writable transaction root is available. "
+                                + rendered
+                            )
+                        migrated = migrate_legacy_sibling_backups(
+                            target, transaction_root
+                        )
                     ensure_no_other_discoverable_install(target, discovery_roots)
                 except Exception:
                     restore_legacy_sibling_backups(migrated)
@@ -210,17 +231,33 @@ def main() -> int:
             else:
                 migrated: list[tuple[Path, Path]] = []
                 quarantine: Optional[Path] = None
-                backup_root = backup_root_for_target(target)
-                backup_root.mkdir(parents=True, exist_ok=True)
-                backup_root = backup_root_for_target(target)
+                target_manifest_parked = False
+                transaction_root, attempts = select_transaction_root(
+                    target,
+                    discovery_roots,
+                    requested=args.transaction_root,
+                    stored=stored_transaction_root(target),
+                )
+                if transaction_root is None:
+                    rendered = "; ".join(
+                        f"{attempt['path']}: {attempt['error']}"
+                        for attempt in attempts
+                    )
+                    raise RuntimeError(
+                        "No safe writable transaction root is available. " + rendered
+                    )
+                transaction_root.mkdir(parents=True, exist_ok=True)
                 try:
-                    migrated = migrate_legacy_sibling_backups(target)
+                    migrated = migrate_legacy_sibling_backups(
+                        target, transaction_root
+                    )
                     ensure_no_other_discoverable_install(target, discovery_roots)
                     current_directory = Path.cwd().resolve()
                     if _is_within(current_directory, target.resolve()):
                         os.chdir(str(target.parent))
+                    target_manifest_parked = park_skill_manifest(target)
                     quarantine = _move_to_backup(
-                        target, backup_root, "uninstall-pending"
+                        target, transaction_root, "uninstall-pending"
                     )
                     ensure_no_other_discoverable_install(target, discovery_roots)
                     shutil.rmtree(quarantine)
@@ -233,15 +270,35 @@ def main() -> int:
                             and quarantine.exists()
                             and not target.exists()
                         ):
+                            quarantine_error = managed_install_validation_error(
+                                quarantine, DORMANT_SKILL_MANIFEST
+                            )
+                            if quarantine_error is not None:
+                                raise RuntimeError(
+                                    "Refusing to restore a partially deleted uninstall "
+                                    f"quarantine at {quarantine}: {quarantine_error}"
+                                )
                             quarantine.replace(target)
+                            if target_manifest_parked:
+                                activate_parked_skill_manifest(target)
+                        elif target_manifest_parked and target.exists():
+                            activate_parked_skill_manifest(target)
+                        if target.exists():
+                            restored_error = managed_install_validation_error(target)
+                            if restored_error is not None:
+                                raise RuntimeError(
+                                    "Recovered uninstall target failed validation: "
+                                    + restored_error
+                                )
                     except Exception as recovery_exc:
                         recovery_errors.append(f"target restore failed: {recovery_exc}")
-                    try:
-                        restore_legacy_sibling_backups(migrated)
-                    except Exception as recovery_exc:
-                        recovery_errors.append(
-                            f"legacy-backup restore failed: {recovery_exc}"
-                        )
+                    if target.exists():
+                        try:
+                            restore_legacy_sibling_backups(migrated)
+                        except Exception as recovery_exc:
+                            recovery_errors.append(
+                                f"legacy-backup restore failed: {recovery_exc}"
+                            )
                     if recovery_errors:
                         raise RuntimeError(
                             f"Uninstall failed: {exc}. Recovery also failed: "
@@ -258,7 +315,8 @@ def main() -> int:
                     "status": "uninstalled",
                     "host": host,
                     "target": str(target),
-                    "backup_root": str(backup_root),
+                    "backup_root": str(transaction_root),
+                    "transaction_root": str(transaction_root),
                     "migrated_legacy_backups": [
                         str(destination) for _, destination in migrated
                     ],

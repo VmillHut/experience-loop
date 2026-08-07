@@ -7,11 +7,11 @@
   </picture>
 
   <p>
-    <a href="https://github.com/VmillHut/experience-loop/actions/workflows/ci.yml"><img src="https://github.com/VmillHut/experience-loop/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
-    <img src="https://img.shields.io/badge/Python-3.9%2B-18B6A4?logo=python&logoColor=white" alt="Python 3.9+">
-    <img src="https://img.shields.io/badge/tested-3.9--3.14-0F766E" alt="Tested on Python 3.9-3.14">
-    <img src="https://img.shields.io/badge/version-0.1.0-5568FF" alt="Version 0.1.0">
-    <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-64748B" alt="MIT License"></a>
+    <a href="https://github.com/VmillHut/experience-loop/actions/workflows/ci.yml"><strong>CI</strong></a> ·
+    <strong>Python 3.9+</strong> ·
+    <strong>Tested 3.9–3.14</strong> ·
+    <strong>v0.1.0</strong> ·
+    <a href="LICENSE"><strong>MIT</strong></a>
   </p>
 
   <p>
@@ -44,7 +44,7 @@ It does not turn real work into a course or make you hand-write work an Agent ca
 3. **Transfer judgment** · `COMPOUND JUDGMENT` — Only predictions, corrections, real outcomes, and later reuse count as growth; longer conversations and successful code generation do not.
 
 <div align="center">
-  <img src="assets/readme-loop.en.svg" alt="A top lane that only ships work and a lower Experience Loop lane that preserves judgment, evidence, reflection, and reusable experience" width="100%">
+  <img src="assets/readme-loop.en.svg" alt="A top lane that only ships work and a lower Experience Loop lane that preserves judgment, evidence, reflection, and reusable experience" width="100%" loading="lazy" decoding="async">
 </div>
 
 **The result is not more teaching steps. It is engineering judgment that has survived real evidence and can be reused later.**
@@ -54,16 +54,14 @@ It does not turn real work into a course or make you hand-write work an Agent ca
 ## 02 · Installation: hand the repository to AI
 
 > [!TIP]
-> The simplest installation path is to give the sentence below to any AI with local terminal and filesystem access.
+> The simplest path is to give the sentence below to the current AI. It prefers the host-native install manager and, if one command, directory, or method fails, continues through safe routes within current authority instead of waiting for another “keep installing” prompt.
 
 ```text
-Install and initialize the `experience-loop` Skill from:
-https://github.com/VmillHut/experience-loop
-Follow the repository-specific safety and acceptance contract in `docs/AI_INSTALL.en.md`.
+Install and initialize the `experience-loop` Skill from https://github.com/VmillHut/experience-loop. Prefer the current host's native install manager; if any command, directory, or method is unavailable, continue automatically through the safe alternatives in `docs/AI_INSTALL.en.md` within current authority until filesystem, runtime, and host-discovery acceptance succeeds or every viable route is proven unavailable.
 ```
 
-1. **Resolve the host** — The Agent discovers the current host's live directories, discovery behavior, and capability boundaries.
-2. **Install and verify** — A deterministic installer performs safe writes, then verifies complete files, runtime health, and actual host discovery.
+1. **Choose the manager** — The Agent resolves the host-native Skill/Plugin manager, discovery directories, and effective permissions without freezing a product path.
+2. **Keep progressing** — An uncommitted failed attempt that left the target unchanged acquires no ownership. If it wrote anything, that method first recovers only its own artifacts before the Agent continues through safe routes.
 3. **Optional onboarding** — One short questionnaire may be skipped entirely, followed by an optional two-minute conversational tutorial.
 
 After installation, only one choice remains:
@@ -78,11 +76,11 @@ Choose yes to experience "judge first, then inspect the evidence" in a tiny real
 
 <summary><strong>Host compatibility, safety boundaries, and upgrades</strong></summary>
 
-The installation contract never freezes today's host paths or invocation syntax. The installation AI resolves its live host capabilities, deterministic code performs safe writes, and three independent forms of evidence confirm the result. Missing host capability is reported honestly; success is never faked by deleting profiles, the experience ledger, or Knowledge Lens.
+The installation contract never freezes today's host paths or invocation syntax. The installation AI resolves the current host and install manager again, then confirms filesystem, runtime, and actual host discovery independently. Missing capability is reported honestly; success is never faked by deleting profiles, the experience ledger, or Knowledge Lens.
 
 The optional questionnaire covers only what you choose to share: role, experience, common domains, growth direction, explanation style, and intervention preference. It needs no resume, project names, or sensitive metrics, and it does not scan projects or read material on the side.
 
-On upgrade, the installer recognizes managed prior versions and keeps a verifiable backup; it prints a rollback command only when that backup is complete. See the [AI installation protocol](docs/AI_INSTALL.en.md) and [dynamic host contract](references/host-compatibility.md).
+The goal is not to make one command succeed. One failed route is not an installation failure; the Agent stops only after every applicable safe route has failure evidence or continuing genuinely needs new authority. Upgrades normally retain their manager, while changed host rules trigger a controlled migration. Repository-managed installs probe real write and two-way rename capabilities, fall back to a dormant transaction container when the normal backup location is unavailable, and use the new lifecycle manager for rollback instead of executing an old backup installer. See the [AI installation protocol](docs/AI_INSTALL.en.md) and [dynamic host contract](references/host-compatibility.md).
 
 </details>
 
@@ -93,7 +91,7 @@ On upgrade, the installer recognizes managed prior versions and keeps a verifiab
 The core mechanism behind the default `auto` mode is not "interrupt less" and not "ask more." It is a small radar that follows changing task evidence and keeps asking: **is there an engineering judgment worth keeping with the human, and is this the right moment to intervene?**
 
 <div align="center">
-  <img src="assets/readme-auto.en.svg" alt="Experience Loop selects a response from live task evidence, the value of a human judgment, and whether it is the right moment to intervene" width="100%">
+  <img src="assets/readme-auto.en.svg" alt="Experience Loop selects a response from live task evidence, the value of a human judgment, and whether it is the right moment to intervene" width="100%" loading="lazy" decoding="async">
 </div>
 
 ### Three conditions for intervention
@@ -114,7 +112,7 @@ These responses are examples, not a closed menu. `auto` has no fixed question co
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="assets/readme-modes.en.dark.svg">
-  <img src="assets/readme-modes.en.light.svg" alt="auto decides from evidence, focus practices one goal, deep explores the full decision, and off keeps delivery only" width="100%">
+  <img src="assets/readme-modes.en.light.svg" alt="auto decides from evidence, focus practices one goal, deep explores the full decision, and off keeps delivery only" width="100%" loading="lazy" decoding="async">
 </picture>
 
 | Mode | Who controls the intensity | What you actually experience |
@@ -244,11 +242,11 @@ Its job is simpler to state and harder to do: **keep the few judgments that shap
 
 See [Safety and privacy](references/safety-and-privacy.md) and [SECURITY.md](SECURITY.md) for the complete rules.
 
-### Manual installation is the fallback
+### Prefer native management; continue through safe fallbacks
 
-In most cases, give the repository URL to an AI with local terminal and filesystem access. Only when the current AI lacks those capabilities should you switch to a capable Agent or have an operator read the installer's `--help`.
+After receiving the repository URL, the AI first uses the host's supported Skill, Plugin, or Marketplace manager. That manager owns paths and upgrades, while the installed copy runs `scripts/install.py --verify-only` for read-only acceptance. If the native route did not commit, any AI with Python 3.9+ and target write capability can continue with the repository installer. Verified placement is allowed only when file tools can guarantee reversible staging, atomic activation, and complete acceptance.
 
-Installation must continue through the receipt's validation and onboarding steps; copying files is not enough. To upgrade, pull the latest source and run the same installer. Do not use `--force` on an unknown target directory.
+A Git URL is not itself a safe installation protocol: other repositories may contain different layouts, executable scripts, hooks, MCP, or external dependencies. The installation AI must identify the manager and permission boundary first. An uncommitted failed attempt does not lock the manager; committed upgrade ownership must not change silently, and `--force` must not be used on an unknown target directory.
 
 ### Further reading
 

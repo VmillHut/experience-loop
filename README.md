@@ -7,11 +7,11 @@
   </picture>
 
   <p>
-    <a href="https://github.com/VmillHut/experience-loop/actions/workflows/ci.yml"><img src="https://github.com/VmillHut/experience-loop/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
-    <img src="https://img.shields.io/badge/Python-3.9%2B-18B6A4?logo=python&logoColor=white" alt="Python 3.9+">
-    <img src="https://img.shields.io/badge/tested-3.9--3.14-0F766E" alt="Tested on Python 3.9-3.14">
-    <img src="https://img.shields.io/badge/version-0.1.0-5568FF" alt="Version 0.1.0">
-    <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-64748B" alt="MIT License"></a>
+    <a href="https://github.com/VmillHut/experience-loop/actions/workflows/ci.yml"><strong>CI</strong></a> ·
+    <strong>Python 3.9+</strong> ·
+    <strong>Tested 3.9–3.14</strong> ·
+    <strong>v0.1.0</strong> ·
+    <a href="LICENSE"><strong>MIT</strong></a>
   </p>
 
   <p>
@@ -44,7 +44,7 @@
 3. **判断迁移** · `COMPOUND JUDGMENT` — 只有预测、纠正、真实结果和后续复用才算增长；聊天变长、代码生成成功都不算。
 
 <div align="center">
-  <img src="assets/readme-loop.zh.svg" alt="上方展示只完成任务的线性流程；下方展示 Experience Loop 在交付中保留判断、验收、复盘和可迁移经验" width="100%">
+  <img src="assets/readme-loop.zh.svg" alt="上方展示只完成任务的线性流程；下方展示 Experience Loop 在交付中保留判断、验收、复盘和可迁移经验" width="100%" loading="lazy" decoding="async">
 </div>
 
 　　**最终得到的不是更多教学步骤，而是一次次经过证据检验、以后还能复用的工程判断。**
@@ -54,16 +54,14 @@
 ## 02 · 安装：把仓库交给 AI
 
 > [!TIP]
-> 最省事的安装方式，是把下面这句话交给任何拥有本机终端和文件权限的 AI。
+> 最省事的安装方式，是把下面这句话交给当前 AI。它会优先调用宿主原生安装管理器；某个命令、目录或方式失败时，会在现有权限内自动继续安全路线，而不是让你再说一次“继续安装”。
 
 ```text
-请根据以下仓库安装并初始化 `experience-loop` Skill：
-https://github.com/VmillHut/experience-loop
-仓库特有的安全与验收要求见 `docs/AI_INSTALL.md`。
+请根据 https://github.com/VmillHut/experience-loop 完成安装并初始化 `experience-loop` Skill：优先使用当前宿主原生安装管理器；若某个命令、目录或方式受限，请在现有权限内按 `docs/AI_INSTALL.md` 自动继续下一条安全路线，直到完成文件、运行时和宿主发现验收，或确认所有可行路线都不可用。
 ```
 
-1. **解析宿主** — Agent 现场确认当前宿主的目录、发现方式与能力边界。
-2. **安装与验收** — 由确定性安装器完成安全写入，并验证文件完整、运行时健康与宿主实际发现。
+1. **选择管理器** — Agent 现场确认宿主原生 Skill/Plugin 管理器、发现目录和实际权限，不写死某个产品路径。
+2. **持续推进** — 未提交且未改动目标的失败尝试不产生安装所有权；若有部分写入，先由该次方法只恢复自身产物，再依次尝试安全路线。
 3. **可选初始化** — 提供一次可全部跳过的简短问答，以及约两分钟的对话式教学。
 
 安装完成后只会留下一个选择：
@@ -78,11 +76,11 @@ https://github.com/VmillHut/experience-loop
 
 <summary><strong>平台兼容、安全边界与升级行为</strong></summary>
 
-　　安装契约不会把今天的宿主路径或调用语法写死。安装 AI 会解析自己所在宿主的实时能力，由安装器执行安全写入，并用三段独立证据确认结果；宿主能力不足会被如实报告，不会通过删掉画像、经验账本或 Knowledge Lens 来伪装成功。
+　　安装契约不会把今天的宿主路径或调用语法写死。安装 AI 会重新解析当前宿主和安装管理器，并用文件、运行时、宿主发现三段独立证据确认结果；宿主能力不足会被如实报告，不会通过删掉画像、经验账本或 Knowledge Lens 来伪装成功。
 
 　　初始化问答只涉及你愿意提供的岗位、经验、常做领域、成长方向、解释风格与介入偏好；不需要简历、项目名或敏感指标，也不会顺手扫描项目或读取资料。
 
-　　升级时，安装器会识别受管理的旧版本并保留可验证备份；只有备份完整时才会给出回滚命令。完整契约见 [AI 安装协议](docs/AI_INSTALL.md) 与 [动态宿主契约](references/host-compatibility.md)。
+　　安装目标不是“跑通某一条命令”。单一路径失败不等于安装失败；只有全部适用安全路线都有失败证据，或继续确实需要新增权限时才停止。升级通常沿用原安装管理器，宿主规则变化时则做受控迁移。仓库安装器会真实探测写入和双向 rename 能力；常规备份位置不可写时，自动使用休眠事务容器，且由新版生命周期管理器回滚，不执行旧备份里的安装脚本。完整契约见 [AI 安装协议](docs/AI_INSTALL.md) 与 [动态宿主契约](references/host-compatibility.md)。
 
 </details>
 
@@ -93,7 +91,7 @@ https://github.com/VmillHut/experience-loop
 　　默认模式 `auto` 的核心机制不是「少打扰」，也不是「多提问」。它像一枚跟随任务证据变化的小雷达，持续判断：**这里有没有值得留给人的工程判断，现在是不是合适的介入时机。**
 
 <div align="center">
-  <img src="assets/readme-auto.zh.svg" alt="Experience Loop 根据真实任务证据、判断价值和介入时机选择静默执行、解释、检查点或短训练循环" width="100%">
+  <img src="assets/readme-auto.zh.svg" alt="Experience Loop 根据真实任务证据、判断价值和介入时机选择静默执行、解释、检查点或短训练循环" width="100%" loading="lazy" decoding="async">
 </div>
 
 ### 介入成立的三个条件
@@ -114,7 +112,7 @@ https://github.com/VmillHut/experience-loop
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="assets/readme-modes.zh.dark.svg">
-  <img src="assets/readme-modes.zh.light.svg" alt="auto 默认智能，focus 定向练习，deep 完整推演，off 只交付" width="100%">
+  <img src="assets/readme-modes.zh.light.svg" alt="auto 默认智能，focus 定向练习，deep 完整推演，off 只交付" width="100%" loading="lazy" decoding="async">
 </picture>
 
 | 模&#8288;式 | 谁决定强度 | 你会实际感受到什么 |
@@ -244,11 +242,11 @@ https://github.com/VmillHut/experience-loop
 
 　　完整规则见 [安全与隐私说明](references/safety-and-privacy.md) 和 [SECURITY.md](SECURITY.md)。
 
-### 手工安装只是兜底
+### 原生管理优先，安全路线自动兜底
 
-　　绝大多数情况下，把仓库地址交给有本机终端和文件权限的 AI 即可。只有当前 AI 缺少这些能力时，才需要换一个有权限的 Agent，或由操作者阅读安装器 `--help` 自行执行。
+　　把仓库地址交给 AI 后，优先使用当前宿主正式支持的 Skill、Plugin 或 Marketplace 管理器；它负责路径和升级，已安装副本通过 `scripts/install.py --verify-only` 做只读验收。原生方式未提交成功时，任何具备 Python 3.9+ 与目标写权限的 AI 都可继续调用仓库安装器；只有文件工具但能保证可逆暂存、原子激活和完整验收时，才可使用受验证放置。
 
-　　安装后必须继续完成回执中的验证和初始化，不能只复制文件。升级时重新下载或拉取最新源码，再运行同一个安装器；不要对未知目标目录擅自使用 `--force`。
+　　Git URL 本身不是安全安装协议：其他仓库可能包含不同目录布局、脚本、hooks、MCP 或外部依赖。安装 AI 必须先确认安装管理器和权限边界；一次未提交的失败尝试不锁定管理器，已经提交的升级所有权则不得静默更换，也不要对未知目标目录擅自使用 `--force`。
 
 ### 进一步阅读
 

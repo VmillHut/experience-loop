@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import contextlib
 import importlib.util
 import hashlib
+import io
 import json
 import os
 from pathlib import Path
@@ -50,6 +52,22 @@ def load_installer_module():
         raise AssertionError("Could not load scripts/install.py for static validation tests.")
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
+    return module
+
+
+def load_uninstaller_module():
+    scripts_directory = str(ROOT / "scripts")
+    spec = importlib.util.spec_from_file_location(
+        "experience_loop_uninstaller_under_test", ROOT / "scripts" / "uninstall.py"
+    )
+    if spec is None or spec.loader is None:
+        raise AssertionError("Could not load scripts/uninstall.py for recovery tests.")
+    module = importlib.util.module_from_spec(spec)
+    sys.path.insert(0, scripts_directory)
+    try:
+        spec.loader.exec_module(module)
+    finally:
+        sys.path.remove(scripts_directory)
     return module
 
 
@@ -313,11 +331,13 @@ class InstallTests(unittest.TestCase):
             self.assertTrue(payload["rollback_available"])
             self.assertIsNone(payload["rollback_note"])
 
-            rollback = run_python(
-                backup / "scripts" / "install.py",
-                "--target",
-                str(target),
-                "--json",
+            rollback = subprocess.run(
+                payload["command_argv"]["rollback"],
+                cwd=ROOT,
+                text=True,
+                encoding="utf-8",
+                capture_output=True,
+                check=False,
             )
             self.assertEqual(rollback.returncode, 0, rollback.stderr)
             self.assertEqual(
@@ -408,6 +428,48 @@ class InstallTests(unittest.TestCase):
             self.assertEqual(blocked.returncode, 4)
             self.assertIn("Another discoverable", json.loads(blocked.stdout)["error"])
 
+    def test_verify_only_accepts_complete_host_managed_copy_without_marker(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="experience-loop-host-managed-") as raw:
+            target = Path(raw) / "skills" / "experience-loop"
+            shutil.copytree(
+                ROOT,
+                target,
+                ignore=shutil.ignore_patterns(".git", "__pycache__", "*.pyc"),
+            )
+            marker = target / ".experience-loop-install.json"
+            self.assertFalse(marker.exists())
+
+            verified = run_python(
+                target / "scripts" / "install.py",
+                "--target",
+                str(target),
+                "--verify-only",
+                "--json",
+            )
+            self.assertEqual(verified.returncode, 0, verified.stderr)
+            data = json.loads(verified.stdout)
+            self.assertEqual(data["status"], "host-managed-copy-validated")
+            self.assertEqual(data["install_manager"], "host-native")
+            self.assertEqual(
+                data["filesystem_status"], "complete-host-managed-copy-validated"
+            )
+            self.assertEqual(
+                data["lifecycle_owner"], "current-host-native-install-manager"
+            )
+            self.assertFalse(marker.exists())
+
+            duplicate = target.with_name("experience-loop-copy")
+            shutil.copytree(target, duplicate)
+            blocked = run_python(
+                target / "scripts" / "install.py",
+                "--target",
+                str(target),
+                "--verify-only",
+                "--json",
+            )
+            self.assertEqual(blocked.returncode, 4)
+            self.assertIn("Another discoverable", json.loads(blocked.stdout)["error"])
+
     def test_previous_runtime_contract_upgrades_without_force_and_rolls_back(self) -> None:
         with tempfile.TemporaryDirectory(prefix="experience-loop-previous-upgrade-") as raw:
             root = Path(raw)
@@ -461,7 +523,8 @@ class InstallTests(unittest.TestCase):
             self.assertFalse((backup / "references" / "onboarding.md").exists())
             rollback_argv = data["command_argv"]["rollback"]
             self.assertIsNotNone(rollback_argv)
-            self.assertIn("--force", rollback_argv)
+            self.assertIn("--restore-from", rollback_argv)
+            self.assertNotEqual(Path(rollback_argv[1]).parent, backup / "scripts")
 
             rollback = subprocess.run(
                 rollback_argv,
@@ -521,11 +584,13 @@ class InstallTests(unittest.TestCase):
             self.assertTrue(upgrade_data["rollback_available"])
             backup = Path(upgrade_data["backup"])
 
-            rollback = run_python(
-                backup / "scripts" / "install.py",
-                "--target",
-                str(target),
-                "--json",
+            rollback = subprocess.run(
+                upgrade_data["command_argv"]["rollback"],
+                cwd=ROOT,
+                text=True,
+                encoding="utf-8",
+                capture_output=True,
+                check=False,
             )
             self.assertEqual(rollback.returncode, 0, rollback.stderr)
             status = run_python(
@@ -606,12 +671,300 @@ class InstallTests(unittest.TestCase):
                 "_is_reparse_point",
                 side_effect=simulated_reparse_point,
             ):
-                validation_error = installer.managed_install_validation_error(target)
-                rollback_error = installer.rollback_source_error(target)
+                installer.park_skill_manifest(target)
+                try:
+                    validation_error = installer.managed_install_validation_error(
+                        target, installer.DORMANT_SKILL_MANIFEST
+                    )
+                    rollback_error = installer.rollback_source_error(target)
+                finally:
+                    installer.activate_parked_skill_manifest(target)
 
             self.assertIn("reparse point", validation_error)
             self.assertIn("scripts/experience_loop.py", validation_error)
             self.assertEqual(rollback_error, validation_error)
+
+    def test_restricted_parent_uses_dormant_transaction_fallback(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="experience-loop-restricted-parent-") as raw:
+            root = Path(raw)
+            skills_root = root / "skills"
+            skills_root.mkdir()
+            target = skills_root / "experience-loop"
+            preferred_blocker = root / "skill-backups"
+            preferred_blocker.write_text("host-owned\n", encoding="utf-8")
+            fallback = (
+                skills_root / ".experience-loop-transactions" / "experience-loop"
+            )
+
+            preview = run_script(
+                "install.py", "--target", str(target), "--dry-run", "--json"
+            )
+            self.assertEqual(preview.returncode, 0, preview.stderr)
+            preview_data = json.loads(preview.stdout)
+            self.assertEqual(preview_data["status"], "dry-run")
+            self.assertEqual(
+                Path(preview_data["transaction_root"]), fallback.resolve()
+            )
+            self.assertEqual(
+                preview_data["install_plan"]["transaction_capability"], "verified"
+            )
+            self.assertFalse(fallback.exists())
+            self.assertFalse(target.exists())
+            self.assertEqual(
+                preferred_blocker.read_text(encoding="utf-8"), "host-owned\n"
+            )
+
+            installed = run_script("install.py", "--target", str(target), "--json")
+            self.assertEqual(installed.returncode, 0, installed.stderr)
+            installed_data = json.loads(installed.stdout)
+            self.assertEqual(Path(installed_data["transaction_root"]), fallback.resolve())
+            self.assertIsNone(installed_data["backup"])
+            self.assertFalse(installed_data["rollback_available"])
+            self.assertEqual(discoverable_experience_loops(skills_root), [target])
+            self.assertFalse(fallback.exists())
+            self.assertEqual(
+                preferred_blocker.read_text(encoding="utf-8"), "host-owned\n"
+            )
+
+    def test_restricted_parent_upgrade_and_rollback_use_new_manager(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="experience-loop-restricted-upgrade-") as raw:
+            root = Path(raw)
+            skills_root = root / "skills"
+            skills_root.mkdir()
+            target = skills_root / "experience-loop"
+            preferred_blocker = root / "skill-backups"
+            preferred_blocker.write_text("host-owned\n", encoding="utf-8")
+            fallback = (
+                skills_root / ".experience-loop-transactions" / "experience-loop"
+            )
+
+            installed = run_script("install.py", "--target", str(target), "--json")
+            self.assertEqual(installed.returncode, 0, installed.stderr)
+            (target / "VERSION").write_text("restricted-old-version\n", encoding="utf-8")
+            (target / "scripts" / "install.py").write_text(
+                "raise SystemExit(97)\n", encoding="utf-8"
+            )
+
+            upgraded = run_script("install.py", "--target", str(target), "--json")
+            self.assertEqual(upgraded.returncode, 0, upgraded.stderr)
+            data = json.loads(upgraded.stdout)
+            backup = Path(data["backup"])
+            self.assertEqual(backup.parent, fallback.resolve())
+            self.assertFalse((backup / "SKILL.md").exists())
+            self.assertTrue((backup / ".experience-loop-SKILL.md").is_file())
+            self.assertTrue(data["rollback_available"])
+            rollback_argv = data["command_argv"]["rollback"]
+            self.assertIsNotNone(rollback_argv)
+            self.assertNotEqual(Path(rollback_argv[1]), backup / "scripts" / "install.py")
+
+            rollback = subprocess.run(
+                rollback_argv,
+                cwd=ROOT,
+                text=True,
+                encoding="utf-8",
+                capture_output=True,
+                check=False,
+            )
+            self.assertEqual(rollback.returncode, 0, rollback.stderr)
+            self.assertEqual(
+                (target / "VERSION").read_text(encoding="utf-8"),
+                "restricted-old-version\n",
+            )
+            self.assertEqual(discoverable_experience_loops(skills_root), [target])
+            self.assertEqual(
+                preferred_blocker.read_text(encoding="utf-8"), "host-owned\n"
+            )
+
+    def test_rollback_move_failure_reactivates_current_target(self) -> None:
+        installer = load_installer_module()
+        with tempfile.TemporaryDirectory(prefix="experience-loop-rollback-recovery-") as raw:
+            root = Path(raw)
+            target = root / "skills" / "experience-loop"
+            installed = run_script("install.py", "--target", str(target), "--json")
+            self.assertEqual(installed.returncode, 0, installed.stderr)
+            upgraded = run_script("install.py", "--target", str(target), "--json")
+            self.assertEqual(upgraded.returncode, 0, upgraded.stderr)
+            data = json.loads(upgraded.stdout)
+            backup = Path(data["backup"])
+            transaction_root = Path(data["transaction_root"])
+            marker = json.loads(
+                (target / ".experience-loop-install.json").read_text(encoding="utf-8")
+            )
+            contract = marker["host_contract"]
+            current_version = (target / "VERSION").read_text(encoding="utf-8")
+
+            with mock.patch.object(
+                installer,
+                "_move_to_backup",
+                side_effect=OSError("simulated rollback move failure"),
+            ):
+                with self.assertRaisesRegex(OSError, "simulated rollback move failure"):
+                    installer.restore_backup(
+                        target, backup, contract, transaction_root
+                    )
+
+            self.assertEqual(
+                (target / "VERSION").read_text(encoding="utf-8"), current_version
+            )
+            self.assertTrue((target / "SKILL.md").is_file())
+            self.assertFalse((target / ".experience-loop-SKILL.md").exists())
+            self.assertTrue((backup / ".experience-loop-SKILL.md").is_file())
+            self.assertEqual(discoverable_experience_loops(target.parent), [target])
+
+    def test_committed_first_install_reports_lifecycle_cleanup_as_warning(self) -> None:
+        installer = load_installer_module()
+        with tempfile.TemporaryDirectory(prefix="experience-loop-cleanup-warning-") as raw:
+            root = Path(raw)
+            target = root / "skills" / "experience-loop"
+            transaction_root = root / "skill-backups" / "experience-loop"
+            manager_installer = transaction_root / "install.py"
+            contract = {
+                "host": "Test Agent",
+                "scope": "custom",
+                "target": str(target.resolve()),
+                "invocation": None,
+                "reload_hint": None,
+                "host_evidence": "Test contract.",
+                "discovery_roots": [str(target.parent.resolve())],
+                "affected_hosts": ["Test Agent"],
+            }
+            real_unlink = Path.unlink
+
+            def fail_manager_cleanup(path: Path, *args, **kwargs):
+                if installer._same_path(path, manager_installer):
+                    raise PermissionError("simulated lifecycle cleanup failure")
+                return real_unlink(path, *args, **kwargs)
+
+            with mock.patch.object(Path, "unlink", new=fail_manager_cleanup):
+                result = installer.install(ROOT, target, False, contract)
+
+            self.assertEqual(result["status"], "installed")
+            self.assertTrue(result["warnings"])
+            self.assertIn("lifecycle cleanup failed", result["warnings"][0])
+            self.assertTrue((target / "SKILL.md").is_file())
+            self.assertEqual(discoverable_experience_loops(target.parent), [target])
+
+    def test_dry_run_blocks_when_all_transaction_roots_are_unavailable(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="experience-loop-no-transaction-") as raw:
+            root = Path(raw)
+            skills_root = root / "skills"
+            skills_root.mkdir()
+            target = skills_root / "experience-loop"
+            preferred_blocker = root / "skill-backups"
+            fallback_blocker = skills_root / ".experience-loop-transactions"
+            preferred_blocker.write_text("host-owned\n", encoding="utf-8")
+            fallback_blocker.write_text("host-owned\n", encoding="utf-8")
+
+            preview = run_script(
+                "install.py", "--target", str(target), "--dry-run", "--json"
+            )
+            self.assertEqual(preview.returncode, 4, preview.stderr)
+            preview_data = json.loads(preview.stdout)
+            self.assertEqual(preview_data["status"], "blocked")
+            self.assertIsNone(preview_data["transaction_root"])
+            self.assertEqual(
+                preview_data["install_plan"]["transaction_capability"], "blocked"
+            )
+            self.assertTrue(preview_data["install_plan"]["blockers"])
+
+            installed = run_script("install.py", "--target", str(target), "--json")
+            self.assertEqual(installed.returncode, 4, installed.stderr)
+            self.assertFalse(target.exists())
+            self.assertEqual(
+                preferred_blocker.read_text(encoding="utf-8"), "host-owned\n"
+            )
+            self.assertEqual(
+                fallback_blocker.read_text(encoding="utf-8"), "host-owned\n"
+            )
+
+    def test_rejected_outer_transaction_path_still_uses_dormant_fallback(self) -> None:
+        installer = load_installer_module()
+        with tempfile.TemporaryDirectory(prefix="experience-loop-reparse-fallback-") as raw:
+            root = Path(raw)
+            target = root / "skills" / "experience-loop"
+            preferred = root / "skill-backups" / "experience-loop"
+            fallback = target.parent / ".experience-loop-transactions" / "experience-loop"
+            contract = {
+                "host": "Test Agent",
+                "scope": "custom",
+                "target": str(target.resolve()),
+                "invocation": None,
+                "reload_hint": None,
+                "host_evidence": "Test contract.",
+                "discovery_roots": [str(target.parent.resolve())],
+                "affected_hosts": ["Test Agent"],
+            }
+            real_first_reparse = installer.first_reparse_component
+
+            def reject_preferred(path: Path) -> Optional[Path]:
+                if installer._same_path(path, preferred):
+                    return preferred
+                return real_first_reparse(path)
+
+            with mock.patch.object(
+                installer,
+                "first_reparse_component",
+                side_effect=reject_preferred,
+            ):
+                plan = installer.install_plan(target, False, contract)
+
+            self.assertEqual(plan["transaction_capability"], "verified")
+            self.assertEqual(Path(plan["transaction_root"]), fallback.resolve())
+            self.assertEqual(plan["transaction_attempts"][0]["status"], "unavailable")
+            self.assertEqual(plan["transaction_attempts"][1]["status"], "ready")
+
+    def test_activation_failure_restores_previous_target_without_discoverable_residue(self) -> None:
+        installer = load_installer_module()
+        with tempfile.TemporaryDirectory(prefix="experience-loop-activation-failure-") as raw:
+            root = Path(raw)
+            target = root / "skills" / "experience-loop"
+            first = run_script("install.py", "--target", str(target), "--json")
+            self.assertEqual(first.returncode, 0, first.stderr)
+            (target / "VERSION").write_text("before-failure\n", encoding="utf-8")
+            contract = {
+                "host": "Test Agent",
+                "scope": "custom",
+                "target": str(target.resolve()),
+                "invocation": None,
+                "reload_hint": None,
+                "host_evidence": "Test contract.",
+                "discovery_roots": [str(target.parent.resolve())],
+                "affected_hosts": ["Test Agent"],
+            }
+            real_activate = installer.activate_parked_skill_manifest
+            failed = False
+
+            def fail_first_activation(path: Path) -> bool:
+                nonlocal failed
+                if not failed and Path(path) == target:
+                    failed = True
+                    raise OSError("simulated activation failure")
+                return real_activate(path)
+
+            with mock.patch.object(
+                installer,
+                "activate_parked_skill_manifest",
+                side_effect=fail_first_activation,
+            ):
+                with self.assertRaisesRegex(OSError, "simulated activation failure"):
+                    installer.install(ROOT, target, False, contract)
+
+            self.assertEqual(
+                (target / "VERSION").read_text(encoding="utf-8"),
+                "before-failure\n",
+            )
+            self.assertTrue((target / "SKILL.md").is_file())
+            self.assertFalse((target / ".experience-loop-SKILL.md").exists())
+            self.assertEqual(discoverable_experience_loops(target.parent), [target])
+            transaction_root = root / "skill-backups" / "experience-loop"
+            if transaction_root.exists():
+                self.assertFalse(
+                    any(
+                        path.name.startswith(".install-")
+                        for path in transaction_root.iterdir()
+                    )
+                )
+                self.assertEqual(list(transaction_root.rglob("SKILL.md")), [])
 
     def test_installer_refuses_unrecognized_target_without_force(self) -> None:
         with tempfile.TemporaryDirectory(prefix="experience-loop-install-") as raw:
@@ -643,6 +996,55 @@ class InstallTests(unittest.TestCase):
             self.assertEqual(result.returncode, 4)
             self.assertEqual(json.loads(result.stdout)["status"], "error")
             self.assertEqual((target / "private.txt").read_text(encoding="utf-8"), "mine")
+
+    def test_partial_uninstall_never_restores_a_damaged_quarantine(self) -> None:
+        uninstaller = load_uninstaller_module()
+        with tempfile.TemporaryDirectory(prefix="experience-loop-partial-uninstall-") as raw:
+            root = Path(raw)
+            target = root / "skills" / "experience-loop"
+            installed = run_script("install.py", "--target", str(target), "--json")
+            self.assertEqual(installed.returncode, 0, installed.stderr)
+            real_rmtree = uninstaller.shutil.rmtree
+            failed = False
+
+            def partial_rmtree(path, *args, **kwargs):
+                nonlocal failed
+                candidate = Path(path)
+                if not failed and candidate.name.startswith("uninstall-pending-"):
+                    failed = True
+                    (candidate / ".experience-loop-SKILL.md").unlink()
+                    (candidate / "VERSION").unlink()
+                    raise OSError("simulated partial quarantine deletion")
+                return real_rmtree(path, *args, **kwargs)
+
+            stdout = io.StringIO()
+            stderr = io.StringIO()
+            argv = [
+                "uninstall.py",
+                "--target",
+                str(target),
+                "--yes",
+                "--json",
+            ]
+            with mock.patch.object(uninstaller.shutil, "rmtree", side_effect=partial_rmtree):
+                with mock.patch.object(sys, "argv", argv):
+                    with contextlib.redirect_stdout(stdout), contextlib.redirect_stderr(stderr):
+                        exit_code = uninstaller.main()
+
+            self.assertEqual(exit_code, 3)
+            data = json.loads(stdout.getvalue())
+            self.assertEqual(data["status"], "refused")
+            self.assertIn("partially deleted uninstall quarantine", data["error"])
+            self.assertFalse(target.exists())
+            self.assertEqual(discoverable_experience_loops(target.parent), [])
+            transaction_root = root / "skill-backups" / "experience-loop"
+            quarantines = [
+                path
+                for path in transaction_root.iterdir()
+                if path.name.startswith("uninstall-pending-")
+            ]
+            self.assertEqual(len(quarantines), 1)
+            self.assertFalse((quarantines[0] / "SKILL.md").exists())
 
     def test_uninstaller_rejects_forged_marker_and_dangerous_target(self) -> None:
         installer = load_installer_module()
@@ -912,6 +1314,82 @@ class InstallTests(unittest.TestCase):
             self.assertEqual(
                 preview_data["install_plan"]["duplicates"],
                 [str(secondary_target.resolve())],
+            )
+
+    def test_upgrade_can_replace_stale_discovery_roots(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="experience-loop-replace-roots-") as raw:
+            root = Path(raw)
+            target = root / "skills" / "experience-loop"
+            stale_root = root / "stale-skills"
+            current_root = root / "current-skills"
+            installed = run_script(
+                "install.py",
+                "--target",
+                str(target),
+                "--discovery-root",
+                str(stale_root),
+                "--json",
+            )
+            self.assertEqual(installed.returncode, 0, installed.stderr)
+            stale_root.write_text("obsolete host path\n", encoding="utf-8")
+            current_root.mkdir()
+
+            missing_evidence = run_script(
+                "install.py",
+                "--target",
+                str(target),
+                "--replace-discovery-roots",
+                "--discovery-root",
+                str(current_root),
+                "--dry-run",
+                "--json",
+            )
+            self.assertEqual(missing_evidence.returncode, 4)
+            self.assertIn(
+                "requires fresh --host-evidence",
+                json.loads(missing_evidence.stdout)["error"],
+            )
+
+            upgraded = run_script(
+                "install.py",
+                "--target",
+                str(target),
+                "--replace-discovery-roots",
+                "--discovery-root",
+                str(current_root),
+                "--host-evidence",
+                "The installation AI verified the current discovery roots.",
+                "--json",
+            )
+            self.assertEqual(upgraded.returncode, 0, upgraded.stderr)
+            data = json.loads(upgraded.stdout)
+            roots = data["discovery_roots"]
+            self.assertIn(str(target.parent.resolve()), roots)
+            self.assertIn(str(current_root.resolve()), roots)
+            self.assertNotIn(str(stale_root.resolve()), roots)
+            marker = json.loads(
+                (target / ".experience-loop-install.json").read_text(encoding="utf-8")
+            )
+            self.assertEqual(marker["host_contract"]["discovery_roots"], roots)
+
+            rollback = subprocess.run(
+                data["command_argv"]["rollback"],
+                cwd=ROOT,
+                text=True,
+                encoding="utf-8",
+                capture_output=True,
+                check=False,
+            )
+            self.assertEqual(rollback.returncode, 0, rollback.stderr)
+            restored_marker = json.loads(
+                (target / ".experience-loop-install.json").read_text(encoding="utf-8")
+            )
+            self.assertEqual(
+                restored_marker["host_contract"]["discovery_roots"], roots
+            )
+            self.assertEqual(
+                restored_marker["host_contract"]["host_evidence"],
+                "The installation AI verified the current discovery roots.",
             )
 
     def test_uninstaller_reuses_persisted_dynamic_discovery_roots(self) -> None:

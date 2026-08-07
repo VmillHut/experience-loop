@@ -25,6 +25,7 @@ from uuid import uuid4
 
 
 SKILL_NAME = "experience-loop"
+INSTALLER_VERSION = 5
 RUNTIME_ENTRIES = (
     "SKILL.md",
     "LICENSE",
@@ -78,6 +79,10 @@ RUNTIME_CONTRACT_FILES = {
     CURRENT_RUNTIME_CONTRACT: CURRENT_SOURCE_REQUIRED_FILES,
 }
 BACKUP_DIRECTORY_NAME = "skill-backups"
+LOCAL_TRANSACTION_DIRECTORY_NAME = ".experience-loop-transactions"
+DORMANT_SKILL_MANIFEST = ".experience-loop-SKILL.md"
+LIFECYCLE_INSTALLER_NAME = "install.py"
+LIFECYCLE_UNINSTALLER_NAME = "uninstall.py"
 HOST_SCOPES = ("user", "project", "custom")
 
 
@@ -212,6 +217,27 @@ def parse_args() -> argparse.Namespace:
         required=True,
         help="Current host Skill directory resolved and verified by the installation AI.",
     )
+    parser.add_argument(
+        "--transaction-root",
+        type=Path,
+        help=(
+            "Optional same-volume transaction directory. If omitted, the installer "
+            "probes safe candidates and falls back inside the writable Skill root."
+        ),
+    )
+    parser.add_argument(
+        "--restore-from",
+        type=Path,
+        help=argparse.SUPPRESS,
+    )
+    parser.add_argument(
+        "--verify-only",
+        action="store_true",
+        help=(
+            "Validate a complete host-managed copy without writing or taking over "
+            "its install lifecycle. The target must be this installer copy's root."
+        ),
+    )
     parser.add_argument("--scope", choices=HOST_SCOPES, default=None)
     parser.add_argument(
         "--invocation",
@@ -231,6 +257,14 @@ def parse_args() -> argparse.Namespace:
         type=Path,
         default=[],
         help="Additional current-host Skill scan root to check for duplicate installs.",
+    )
+    parser.add_argument(
+        "--replace-discovery-roots",
+        action="store_true",
+        help=(
+            "Replace stored discovery roots with the current target parent and the "
+            "--discovery-root values supplied now. Requires fresh --host-evidence."
+        ),
     )
     parser.add_argument(
         "--affected-host",
@@ -391,19 +425,25 @@ def _is_reparse_point(path: Path) -> bool:
     return bool(reparse_flag and attributes & reparse_flag)
 
 
-def required_file_validation_error(root: Path, relative: str) -> Optional[str]:
+def required_file_validation_error(
+    root: Path, relative: str, skill_manifest: str = "SKILL.md"
+) -> Optional[str]:
     """Reject missing files and reparse points in every path component."""
 
-    relative_path = Path(relative)
+    actual_relative = skill_manifest if relative == "SKILL.md" else relative
+    relative_path = Path(actual_relative)
     if relative_path.is_absolute() or ".." in relative_path.parts:
-        return f"Unsafe required path: {relative}"
+        return f"Unsafe required path: {actual_relative}"
     current = root
     for part in relative_path.parts:
         current = current / part
         if _is_reparse_point(current):
-            return f"Required path contains a symlink, junction, or reparse point: {relative}"
+            return (
+                "Required path contains a symlink, junction, or reparse point: "
+                f"{actual_relative}"
+            )
     if not current.is_file():
-        return f"Required file is missing: {relative}"
+        return f"Required file is missing: {actual_relative}"
     return None
 
 
@@ -494,8 +534,8 @@ def validate_target_path(path: Path) -> Path:
     return target
 
 
-def read_skill_name(path: Path) -> Optional[str]:
-    skill_file = path / "SKILL.md"
+def read_skill_name(path: Path, skill_manifest: str = "SKILL.md") -> Optional[str]:
+    skill_file = path / skill_manifest
     if not skill_file.is_file() or _is_reparse_point(skill_file):
         return None
     try:
@@ -527,17 +567,23 @@ def read_marker(path: Path) -> Optional[dict[str, Any]]:
     return value
 
 
-def stored_host_contract_validation_error(value: object) -> Optional[str]:
+def stored_host_contract_validation_error(
+    value: object, *, validate_discovery_roots: bool = True
+) -> Optional[str]:
     if not isinstance(value, dict):
         return "Dynamic host contract must be an object."
     try:
         roots = value.get("discovery_roots")
-        if not isinstance(roots, list) or not roots:
+        if validate_discovery_roots and (not isinstance(roots, list) or not roots):
             return "Dynamic host safety context has no discovery roots."
-        if not all(isinstance(root, str) and root.strip() for root in roots):
+        if roots is not None and not isinstance(roots, list):
             return "Dynamic host safety context has an invalid discovery root."
-        for root in roots:
-            validate_discovery_root(Path(root))
+        if isinstance(roots, list):
+            if not all(isinstance(root, str) and root.strip() for root in roots):
+                return "Dynamic host safety context has an invalid discovery root."
+            if validate_discovery_roots:
+                for root in roots:
+                    validate_discovery_root(Path(root))
     except RuntimeError as exc:
         return str(exc)
     return None
@@ -552,19 +598,27 @@ def explicit_host_contract_arguments(args: argparse.Namespace) -> bool:
             bool(args.reload_hint),
             bool(args.host_evidence),
             bool(args.discovery_root),
+            args.replace_discovery_roots,
             bool(args.affected_host),
         )
     )
 
 
 def normalized_stored_host_contract(
-    value: dict[str, object], target: Path
+    value: dict[str, object], target: Path, *, include_discovery_roots: bool = True
 ) -> dict[str, object]:
-    error = stored_host_contract_validation_error(value)
+    error = stored_host_contract_validation_error(
+        value, validate_discovery_roots=include_discovery_roots
+    )
     if error is not None:
         raise RuntimeError("Stored dynamic host contract is invalid: " + error)
     roots = unique_discovery_roots(
-        target, [Path(str(root)) for root in value["discovery_roots"]]
+        target,
+        (
+            [Path(str(root)) for root in value["discovery_roots"]]
+            if include_discovery_roots
+            else []
+        ),
     )
     def optional_text(field: str, maximum: int, default: Optional[str] = None) -> Optional[str]:
         try:
@@ -601,6 +655,10 @@ def normalized_stored_host_contract(
 def effective_host_contract(
     args: argparse.Namespace, target: Path
 ) -> dict[str, object]:
+    if args.replace_discovery_roots and not args.host_evidence:
+        raise RuntimeError(
+            "--replace-discovery-roots requires fresh --host-evidence for the new roots."
+        )
     if not target.is_dir() or managed_install_validation_error(target) is not None:
         return build_host_contract(args, target)
     marker = read_marker(target)
@@ -611,7 +669,11 @@ def effective_host_contract(
             raise RuntimeError("Stored dynamic host safety context is missing.")
         return build_host_contract(args, target)
 
-    base = normalized_stored_host_contract(stored, target)
+    base = normalized_stored_host_contract(
+        stored,
+        target,
+        include_discovery_roots=not args.replace_discovery_roots,
+    )
     if not explicit_host_contract_arguments(args):
         return base
 
@@ -637,11 +699,12 @@ def effective_host_contract(
         if args.host_evidence is not None
         else base.get("host_evidence")
     )
-    roots = unique_discovery_roots(
-        target,
-        [Path(str(root)) for root in base["discovery_roots"]]
-        + list(args.discovery_root or []),
+    base_roots = (
+        []
+        if args.replace_discovery_roots
+        else [Path(str(root)) for root in base["discovery_roots"]]
     )
+    roots = unique_discovery_roots(target, base_roots + list(args.discovery_root or []))
     affected_hosts = list(base["affected_hosts"])
     for raw_host in args.affected_host or []:
         label = validated_contract_text(raw_host, "--affected-host", 80)
@@ -675,17 +738,19 @@ def required_files_for_marker(
     return files, None
 
 
-def has_required_runtime(path: Path) -> bool:
+def has_required_runtime(path: Path, skill_manifest: str = "SKILL.md") -> bool:
     for relative in COMPATIBLE_INSTALL_FILES:
-        if required_file_validation_error(path, relative) is not None:
+        if required_file_validation_error(path, relative, skill_manifest) is not None:
             return False
     return (
-        read_skill_name(path) == SKILL_NAME
+        read_skill_name(path, skill_manifest) == SKILL_NAME
         and vendor_bundle_validation_error(path) is None
     )
 
 
-def managed_install_validation_error(path: Path) -> Optional[str]:
+def managed_install_validation_error(
+    path: Path, skill_manifest: str = "SKILL.md"
+) -> Optional[str]:
     if not path.is_dir():
         return "The target is not a directory."
     if _is_reparse_point(path):
@@ -699,12 +764,17 @@ def managed_install_validation_error(path: Path) -> Optional[str]:
     required_files, contract_error = required_files_for_marker(marker)
     if contract_error is not None or required_files is None:
         return contract_error
-    if read_skill_name(path) != SKILL_NAME:
-        return f"SKILL.md does not declare name: {SKILL_NAME}."
+    if read_skill_name(path, skill_manifest) != SKILL_NAME:
+        return f"{skill_manifest} does not declare name: {SKILL_NAME}."
     problems = [
         problem
         for relative in required_files
-        if (problem := required_file_validation_error(path, relative)) is not None
+        if (
+            problem := required_file_validation_error(
+                path, relative, skill_manifest
+            )
+        )
+        is not None
     ]
     if problems:
         return "Required installed files are missing or unsafe: " + "; ".join(problems)
@@ -714,17 +784,17 @@ def managed_install_validation_error(path: Path) -> Optional[str]:
     return None
 
 
-def is_managed_install(path: Path) -> bool:
-    return managed_install_validation_error(path) is None
+def is_managed_install(path: Path, skill_manifest: str = "SKILL.md") -> bool:
+    return managed_install_validation_error(path, skill_manifest) is None
 
 
-def is_legacy_install(path: Path) -> bool:
+def is_legacy_install(path: Path, skill_manifest: str = "SKILL.md") -> bool:
     """Recognize a pre-marker install without weakening uninstall validation."""
 
     return (
         path.is_dir()
         and not (path / MARKER_NAME).exists()
-        and has_required_runtime(path)
+        and has_required_runtime(path, skill_manifest)
     )
 
 
@@ -732,7 +802,17 @@ def is_discoverable_experience_loop(path: Path) -> bool:
     return path.is_dir() and read_skill_name(path) == SKILL_NAME
 
 
+def _is_within(path: Path, parent: Path) -> bool:
+    try:
+        normalized_target(path).relative_to(normalized_target(parent))
+        return True
+    except ValueError:
+        return False
+
+
 def backup_root_for_target(target: Path) -> Path:
+    """Return the preferred transaction root outside the direct Skill scan root."""
+
     root = target.parent.parent / BACKUP_DIRECTORY_NAME / SKILL_NAME
     if _same_path(root, target) or _same_path(root.parent, target.parent):
         raise RuntimeError(f"Could not choose a backup directory outside: {target.parent}")
@@ -749,6 +829,253 @@ def backup_root_for_target(target: Path) -> Path:
             f"component: {reparse_component}"
         )
     return root
+
+
+def local_transaction_root_for_target(target: Path) -> Path:
+    """Return a same-volume fallback beneath a non-Skill container."""
+
+    return (
+        normalized_target(target).parent
+        / LOCAL_TRANSACTION_DIRECTORY_NAME
+        / SKILL_NAME
+    )
+
+
+def stored_transaction_root(target: Path) -> Optional[Path]:
+    marker = read_marker(target)
+    value = marker.get("transaction_root") if marker is not None else None
+    if not isinstance(value, str) or not value.strip():
+        return None
+    return normalized_target(Path(value))
+
+
+def _nearest_existing_directory(path: Path) -> Path:
+    current = normalized_target(path)
+    while not current.exists():
+        parent = current.parent
+        if parent == current:
+            raise RuntimeError(f"No existing directory anchors transaction path: {path}")
+        current = parent
+    if not current.is_dir():
+        raise RuntimeError(f"Transaction path crosses a non-directory entry: {current}")
+    return current
+
+
+def _same_volume(left: Path, right: Path) -> bool:
+    left = normalized_target(left)
+    right = normalized_target(right)
+    if os.name == "nt" and left.anchor and right.anchor:
+        return os.path.normcase(left.anchor) == os.path.normcase(right.anchor)
+    left_anchor = _nearest_existing_directory(left)
+    right_anchor = _nearest_existing_directory(right)
+    try:
+        return os.stat(left_anchor).st_dev == os.stat(right_anchor).st_dev
+    except OSError as exc:
+        raise RuntimeError(f"Could not compare transaction filesystems: {exc}") from exc
+
+
+def validate_transaction_root(
+    target: Path, root: Path, discovery_roots: list[Path]
+) -> Path:
+    target = validate_target_path(target)
+    root = normalized_target(root)
+    if _same_path(root, target) or _is_within(root, target) or _is_within(target, root):
+        raise RuntimeError(f"Transaction root must be separate from the target: {root}")
+    for discovery_root in discovery_roots:
+        discovery_root = validate_discovery_root(discovery_root)
+        if _same_path(root, discovery_root):
+            raise RuntimeError(
+                f"Transaction root cannot equal a Skill discovery root: {root}"
+            )
+        if _is_within(root, discovery_root):
+            allowed = discovery_root / LOCAL_TRANSACTION_DIRECTORY_NAME / SKILL_NAME
+            if not _same_path(root, allowed):
+                raise RuntimeError(
+                    "A transaction root inside a Skill discovery root must use the "
+                    f"reserved dormant container: {allowed}"
+                )
+    reparse_component = first_reparse_component(root)
+    if reparse_component is not None:
+        raise RuntimeError(
+            "Refusing transaction root with a symlink, junction, or reparse-point "
+            f"component: {reparse_component}"
+        )
+    if root.exists() and not root.is_dir():
+        raise RuntimeError(f"Transaction root is not a directory: {root}")
+    if read_skill_name(root) is not None:
+        raise RuntimeError(f"Transaction root must not be a discoverable Skill: {root}")
+    if not _same_volume(target.parent, root):
+        raise RuntimeError(
+            f"Transaction root must be on the same filesystem as the target: {root}"
+        )
+    return root
+
+
+def _create_missing_probe_directories(path: Path, created: list[Path]) -> None:
+    missing: list[Path] = []
+    current = normalized_target(path)
+    while not current.exists():
+        missing.append(current)
+        parent = current.parent
+        if parent == current:
+            raise RuntimeError(f"Cannot create transaction path: {path}")
+        current = parent
+    if not current.is_dir():
+        raise RuntimeError(f"Transaction path crosses a non-directory entry: {current}")
+    for candidate in reversed(missing):
+        try:
+            candidate.mkdir()
+        except FileExistsError:
+            if not candidate.is_dir():
+                raise RuntimeError(
+                    f"Transaction path became a non-directory entry: {candidate}"
+                )
+        else:
+            created.append(candidate)
+
+
+def probe_transaction_capabilities(target: Path, root: Path) -> None:
+    """Verify reversible create/write and cross-directory rename capabilities."""
+
+    target = validate_target_path(target)
+    root = normalized_target(root)
+    created: list[Path] = []
+    source_probe: Optional[Path] = None
+    moved_probe: Optional[Path] = None
+    primary_error: Optional[Exception] = None
+    cleanup_errors: list[str] = []
+    try:
+        _create_missing_probe_directories(target.parent, created)
+        _create_missing_probe_directories(root, created)
+        source_probe = Path(
+            tempfile.mkdtemp(
+                prefix=".experience-loop-write-probe-", dir=str(target.parent)
+            )
+        )
+        (source_probe / "probe.txt").write_text("probe\n", encoding="utf-8")
+        moved_probe = root / f"{source_probe.name}-moved-{uuid4().hex[:8]}"
+        source_probe.replace(moved_probe)
+        source_probe = target.parent / source_probe.name
+        moved_probe.replace(source_probe)
+        moved_probe = None
+    except Exception as exc:
+        primary_error = exc
+    finally:
+        for candidate in (moved_probe, source_probe):
+            if candidate is None or not candidate.exists():
+                continue
+            try:
+                shutil.rmtree(candidate)
+            except OSError as exc:
+                cleanup_errors.append(f"could not remove probe {candidate}: {exc}")
+        for candidate in sorted(
+            set(created), key=lambda value: len(value.parts), reverse=True
+        ):
+            if not candidate.exists():
+                continue
+            try:
+                candidate.rmdir()
+            except OSError as exc:
+                cleanup_errors.append(
+                    f"could not remove temporary directory {candidate}: {exc}"
+                )
+    if primary_error is not None:
+        detail = f"Transaction capability probe failed for {root}: {primary_error}"
+        if cleanup_errors:
+            detail += ". Cleanup also failed: " + "; ".join(cleanup_errors)
+        raise RuntimeError(detail) from primary_error
+    if cleanup_errors:
+        raise RuntimeError(
+            "Transaction capability probe left temporary state: "
+            + "; ".join(cleanup_errors)
+        )
+
+
+def transaction_root_candidates(
+    target: Path,
+    requested: Optional[Path] = None,
+    stored: Optional[Path] = None,
+) -> list[tuple[str, Path]]:
+    if requested is not None:
+        return [("explicit", normalized_target(requested))]
+    candidates: list[tuple[str, Path]] = []
+    if stored is not None:
+        candidates.append(("stored", normalized_target(stored)))
+    preferred = (
+        normalized_target(target).parent.parent / BACKUP_DIRECTORY_NAME / SKILL_NAME
+    )
+    candidates.extend(
+        (
+            ("outside-discovery-root", preferred),
+            ("dormant-discovery-root-fallback", local_transaction_root_for_target(target)),
+        )
+    )
+    unique: list[tuple[str, Path]] = []
+    for kind, candidate in candidates:
+        if not any(_same_path(candidate, existing) for _, existing in unique):
+            unique.append((kind, candidate))
+    return unique
+
+
+def select_transaction_root(
+    target: Path,
+    discovery_roots: list[Path],
+    requested: Optional[Path] = None,
+    stored: Optional[Path] = None,
+) -> tuple[Optional[Path], list[dict[str, str]]]:
+    attempts: list[dict[str, str]] = []
+    for kind, candidate in transaction_root_candidates(target, requested, stored):
+        try:
+            candidate = validate_transaction_root(target, candidate, discovery_roots)
+            probe_transaction_capabilities(target, candidate)
+        except Exception as exc:
+            attempts.append(
+                {
+                    "kind": kind,
+                    "path": str(candidate),
+                    "status": "unavailable",
+                    "error": str(exc),
+                }
+            )
+            continue
+        attempts.append(
+            {
+                "kind": kind,
+                "path": str(candidate),
+                "status": "ready",
+                "error": "",
+            }
+        )
+        return candidate, attempts
+    return None, attempts
+
+
+def park_skill_manifest(path: Path) -> bool:
+    active = path / "SKILL.md"
+    dormant = path / DORMANT_SKILL_MANIFEST
+    if dormant.exists():
+        raise RuntimeError(f"Dormant Skill manifest already exists: {dormant}")
+    if not active.exists():
+        return False
+    if _is_reparse_point(active):
+        raise RuntimeError(f"Refusing to park a linked Skill manifest: {active}")
+    active.replace(dormant)
+    return True
+
+
+def activate_parked_skill_manifest(path: Path) -> bool:
+    active = path / "SKILL.md"
+    dormant = path / DORMANT_SKILL_MANIFEST
+    if active.exists():
+        if dormant.exists():
+            raise RuntimeError(f"Both active and dormant Skill manifests exist: {path}")
+        return False
+    if not dormant.exists():
+        return False
+    if _is_reparse_point(dormant):
+        raise RuntimeError(f"Refusing to activate a linked Skill manifest: {dormant}")
+    dormant.replace(active)
+    return True
 
 
 def _unique_backup_path(root: Path, label: str) -> Path:
@@ -802,18 +1129,27 @@ def restore_legacy_sibling_backups(migrations: list[tuple[Path, Path]]) -> None:
                 f"path is occupied: {original}"
             )
         destination.replace(original)
+        activate_parked_skill_manifest(original)
 
 
-def migrate_legacy_sibling_backups(target: Path) -> list[tuple[Path, Path]]:
+def migrate_legacy_sibling_backups(
+    target: Path, transaction_root: Optional[Path] = None
+) -> list[tuple[Path, Path]]:
     """Move legacy sibling backups transactionally outside the Skill scan root."""
 
-    backup_root = backup_root_for_target(target)
+    backup_root = transaction_root or backup_root_for_target(target)
     migrations: list[tuple[Path, Path]] = []
     try:
         for candidate in planned_legacy_sibling_backups(target):
-            destination = _move_to_backup(
-                candidate, backup_root, f"legacy-{candidate.name}"
-            )
+            parked = park_skill_manifest(candidate)
+            try:
+                destination = _move_to_backup(
+                    candidate, backup_root, f"legacy-{candidate.name}"
+                )
+            except Exception:
+                if parked and candidate.exists():
+                    activate_parked_skill_manifest(candidate)
+                raise
             migrations.append((candidate, destination))
     except Exception:
         restore_legacy_sibling_backups(migrations)
@@ -875,10 +1211,12 @@ def ensure_no_other_discoverable_install(
 
 
 def install_plan(
-    target: Path, force: bool, host_contract: dict[str, object]
+    target: Path,
+    force: bool,
+    host_contract: dict[str, object],
+    requested_transaction_root: Optional[Path] = None,
 ) -> dict[str, object]:
     target = validate_target_path(target)
-    backup_root = backup_root_for_target(target)
     discovery_roots = [Path(str(root)) for root in host_contract["discovery_roots"]]
     legacy_candidates = planned_legacy_sibling_backups(target)
     duplicates = other_discoverable_installations(
@@ -892,6 +1230,17 @@ def install_plan(
         existing_target_class = "legacy"
     else:
         existing_target_class = "unrecognized"
+    stored_root = (
+        stored_transaction_root(target)
+        if existing_target_class == "managed"
+        else None
+    )
+    transaction_root, transaction_attempts = select_transaction_root(
+        target,
+        discovery_roots,
+        requested=requested_transaction_root,
+        stored=stored_root,
+    )
     requires_force = existing_target_class == "unrecognized"
     blockers: list[str] = []
     if requires_force and not force:
@@ -906,10 +1255,26 @@ def install_plan(
             f"declared by the installation AI: {rendered}. Move it outside that "
             "host's Skill discovery roots before continuing."
         )
+    if transaction_root is None:
+        rendered = "; ".join(
+            f"{attempt['path']}: {attempt['error']}"
+            for attempt in transaction_attempts
+        )
+        blockers.append(
+            "No safe writable same-volume transaction root is available. "
+            + rendered
+        )
     return {
         "existing_target_class": existing_target_class,
         "requires_force": requires_force,
-        "backup_root": str(backup_root),
+        "backup_root": str(transaction_root) if transaction_root is not None else None,
+        "transaction_root": (
+            str(transaction_root) if transaction_root is not None else None
+        ),
+        "transaction_capability": (
+            "verified" if transaction_root is not None else "blocked"
+        ),
+        "transaction_attempts": transaction_attempts,
         "will_backup_existing_target": target.exists(),
         "legacy_migrations": [str(path) for path in legacy_candidates],
         "duplicates": [str(path) for path in duplicates],
@@ -918,13 +1283,19 @@ def install_plan(
 
 
 def copy_runtime(
-    source: Path, staging: Path, host_contract: dict[str, object]
+    source: Path,
+    staging: Path,
+    host_contract: dict[str, object],
+    transaction_root: Path,
+    transaction_id: str,
 ) -> None:
     for name in RUNTIME_ENTRIES:
         item = source / name
         if not item.exists():
             continue
-        destination = staging / name
+        destination = staging / (
+            DORMANT_SKILL_MANIFEST if name == "SKILL.md" else name
+        )
         if item.is_dir():
             shutil.copytree(
                 item,
@@ -938,9 +1309,11 @@ def copy_runtime(
         "skill": SKILL_NAME,
         "installed_at": datetime.now(timezone.utc).isoformat(),
         "source": str(source),
-        "installer_version": 4,
+        "installer_version": INSTALLER_VERSION,
         "runtime_contract": CURRENT_RUNTIME_CONTRACT,
         "host_contract": host_contract,
+        "transaction_root": str(transaction_root),
+        "transaction_id": transaction_id,
     }
     (staging / MARKER_NAME).write_text(
         json.dumps(marker, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
@@ -958,8 +1331,8 @@ def rollback_source_error(backup: Optional[Path]) -> Optional[str]:
     if backup is None:
         return None
     if (backup / MARKER_NAME).exists():
-        return managed_install_validation_error(backup)
-    if not is_legacy_install(backup):
+        return managed_install_validation_error(backup, DORMANT_SKILL_MANIFEST)
+    if not is_legacy_install(backup, DORMANT_SKILL_MANIFEST):
         return (
             "The backup is not a recognized managed or legacy Experience Loop "
             "install with a complete installer."
@@ -977,12 +1350,49 @@ def rollback_note(backup: Optional[Path]) -> Optional[str]:
     )
 
 
-def installer_accepts_dynamic_host_contract(path: Path) -> bool:
-    marker = read_marker(path)
-    if marker is None:
-        return False
-    version = marker.get("installer_version")
-    return isinstance(version, int) and version >= 4
+def lifecycle_manager_paths(transaction_root: Path) -> tuple[Path, Path]:
+    return (
+        transaction_root / LIFECYCLE_INSTALLER_NAME,
+        transaction_root / LIFECYCLE_UNINSTALLER_NAME,
+    )
+
+
+def install_lifecycle_manager(transaction_root: Path) -> tuple[Path, Path]:
+    transaction_root.mkdir(parents=True, exist_ok=True)
+    installer_destination, uninstaller_destination = lifecycle_manager_paths(
+        transaction_root
+    )
+    sources = (
+        (Path(__file__).resolve(), installer_destination),
+        (Path(__file__).resolve().with_name("uninstall.py"), uninstaller_destination),
+    )
+    for source, destination in sources:
+        if not source.is_file():
+            raise RuntimeError(f"Lifecycle manager source is missing: {source}")
+        temporary = destination.with_name(
+            f".{destination.name}.tmp-{uuid4().hex[:8]}"
+        )
+        try:
+            shutil.copy2(source, temporary)
+            temporary.replace(destination)
+        finally:
+            if temporary.exists():
+                temporary.unlink()
+    return installer_destination, uninstaller_destination
+
+
+def cleanup_empty_transaction_root(transaction_root: Path) -> None:
+    if transaction_root.exists():
+        try:
+            transaction_root.rmdir()
+        except OSError:
+            return
+    container = transaction_root.parent
+    if container.name == LOCAL_TRANSACTION_DIRECTORY_NAME and container.exists():
+        try:
+            container.rmdir()
+        except OSError:
+            return
 
 
 def contract_install_argv(
@@ -1032,12 +1442,20 @@ def lifecycle_argv(
     target: Path,
     backup: Optional[Path],
     host_contract: dict[str, object],
+    transaction_root: Path,
 ) -> dict[str, Optional[list[str]]]:
     python = str(Path(sys.executable).resolve())
     source = source.resolve()
     target = target.resolve()
     if backup is not None:
         backup = backup.resolve()
+    transaction_root = transaction_root.resolve()
+    manager_installer, manager_uninstaller = lifecycle_manager_paths(transaction_root)
+    uninstall_script = (
+        manager_uninstaller
+        if manager_installer.is_file() and manager_uninstaller.is_file()
+        else target / "scripts" / "uninstall.py"
+    )
     commands: dict[str, Optional[list[str]]] = {
         "version": [
             python,
@@ -1070,7 +1488,7 @@ def lifecycle_argv(
         ],
         "uninstall": [
             python,
-            str(target / "scripts" / "uninstall.py"),
+            str(uninstall_script),
             *contract_uninstall_argv(host_contract, target),
             "--yes",
         ],
@@ -1085,15 +1503,21 @@ def lifecycle_argv(
         ),
         "rollback": None,
     }
-    if backup is not None and rollback_source_error(backup) is None:
+    if (
+        backup is not None
+        and rollback_source_error(backup) is None
+        and manager_installer.is_file()
+    ):
         rollback_command = [
             python,
-            str(backup / "scripts" / "install.py"),
+            str(manager_installer),
+            "--restore-from",
+            str(backup),
+            "--transaction-root",
+            str(transaction_root),
+            "--target",
+            str(target),
         ]
-        if installer_accepts_dynamic_host_contract(backup):
-            rollback_command.extend(contract_install_argv(host_contract, target))
-        else:
-            rollback_command.extend(["--target", str(target), "--force"])
         commands["rollback"] = rollback_command
     return commands
 
@@ -1103,12 +1527,185 @@ def lifecycle_commands(
     target: Path,
     backup: Optional[Path],
     host_contract: dict[str, object],
+    transaction_root: Path,
 ) -> dict[str, Optional[str]]:
     return {
         name: _quoted_command(parts) if parts is not None else None
         for name, parts in lifecycle_argv(
-            source, target, backup, host_contract
+            source, target, backup, host_contract, transaction_root
         ).items()
+    }
+
+
+def managed_transaction_id(
+    path: Path, skill_manifest: str = "SKILL.md"
+) -> Optional[str]:
+    if managed_install_validation_error(path, skill_manifest) is not None:
+        return None
+    marker = read_marker(path)
+    value = marker.get("transaction_id") if marker is not None else None
+    return value if isinstance(value, str) and value else None
+
+
+def persist_restored_host_contract(
+    target: Path,
+    host_contract: dict[str, object],
+    transaction_root: Path,
+) -> None:
+    marker = read_marker(target)
+    if marker is None:
+        if not is_legacy_install(target):
+            raise RuntimeError(
+                "Cannot attach the current host contract to an invalid restored target."
+            )
+        marker = {
+            "skill": SKILL_NAME,
+            "installed_at": datetime.now(timezone.utc).isoformat(),
+            "source": str(target),
+            "transaction_id": uuid4().hex,
+        }
+    marker["installer_version"] = INSTALLER_VERSION
+    marker["host_contract"] = host_contract
+    marker["transaction_root"] = str(transaction_root)
+    marker_path = target / MARKER_NAME
+    temporary = marker_path.with_name(f".{MARKER_NAME}.tmp-{uuid4().hex[:8]}")
+    try:
+        temporary.write_text(
+            json.dumps(marker, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
+        )
+        temporary.replace(marker_path)
+    except Exception as exc:
+        if temporary.exists():
+            try:
+                temporary.unlink()
+            except OSError as cleanup_exc:
+                raise RuntimeError(
+                    f"Could not persist the restored host contract: {exc}. "
+                    f"Temporary marker cleanup also failed: {cleanup_exc}"
+                ) from exc
+        raise
+    validation_error = managed_install_validation_error(target)
+    if validation_error is not None:
+        raise RuntimeError(
+            "Restored target failed validation after host-contract persistence: "
+            + validation_error
+        )
+
+
+def restore_backup(
+    target: Path,
+    backup: Path,
+    host_contract: dict[str, object],
+    transaction_root: Path,
+) -> dict[str, object]:
+    target = validate_target_path(target)
+    transaction_root = validate_transaction_root(
+        target,
+        transaction_root,
+        [Path(str(root)) for root in host_contract["discovery_roots"]],
+    )
+    probe_transaction_capabilities(target, transaction_root)
+    backup = normalized_target(backup)
+    if not _same_path(backup.parent, transaction_root):
+        raise RuntimeError(
+            "Rollback source must be a direct child of the selected transaction root: "
+            f"{backup}"
+        )
+    backup_error = rollback_source_error(backup)
+    if backup_error is not None:
+        raise RuntimeError(f"Rollback source is invalid: {backup_error}")
+    if not is_managed_install(target):
+        raise RuntimeError(
+            "Rollback requires a complete currently managed Experience Loop target."
+        )
+
+    discovery_roots = [Path(str(root)) for root in host_contract["discovery_roots"]]
+    ensure_no_other_discoverable_install(target, discovery_roots)
+    install_lifecycle_manager(transaction_root)
+    current_backup: Optional[Path] = None
+    current_manifest_parked = False
+    restored_moved = False
+    restored_activated = False
+    try:
+        current_manifest_parked = park_skill_manifest(target)
+        current_backup = _move_to_backup(
+            target, transaction_root, "pre-rollback-current"
+        )
+        backup.replace(target)
+        restored_moved = True
+        restored_activated = activate_parked_skill_manifest(target)
+        if not (is_managed_install(target) or is_legacy_install(target)):
+            raise RuntimeError("Restored Skill failed managed or legacy validation.")
+        persist_restored_host_contract(target, host_contract, transaction_root)
+        discovered = discoverable_installations(target, discovery_roots)
+        if len(discovered) != 1 or not _same_path(discovered[0], target):
+            raise RuntimeError(
+                "Rollback did not leave exactly one discoverable Experience Loop Skill."
+            )
+    except Exception as exc:
+        recovery_errors: list[str] = []
+        try:
+            if restored_moved and target.exists():
+                if restored_activated:
+                    park_skill_manifest(target)
+                target.replace(backup)
+            if (
+                current_backup is not None
+                and current_backup.exists()
+                and not target.exists()
+            ):
+                current_backup.replace(target)
+                if current_manifest_parked:
+                    activate_parked_skill_manifest(target)
+            elif current_manifest_parked and target.exists():
+                activate_parked_skill_manifest(target)
+            if target.exists():
+                restored_error = managed_install_validation_error(target)
+                if restored_error is not None:
+                    raise RuntimeError(
+                        "Recovered current target failed validation: " + restored_error
+                    )
+        except Exception as recovery_exc:
+            recovery_errors.append(f"rollback recovery failed: {recovery_exc}")
+        if recovery_errors:
+            raise RuntimeError(
+                f"Rollback failed: {exc}. Recovery also failed: "
+                + "; ".join(recovery_errors)
+            ) from exc
+        raise
+
+    return {
+        "status": "rolled-back",
+        "version": read_version(target),
+        "source": str(target),
+        "source_provenance": source_provenance(target),
+        "target": str(target),
+        "backup": str(current_backup) if current_backup else None,
+        "backup_root": str(transaction_root),
+        "transaction_root": str(transaction_root),
+        "transaction_capability": "verified",
+        "migrated_legacy_backups": [],
+        **host_receipt(host_contract),
+        "commands": lifecycle_commands(
+            target, target, current_backup, host_contract, transaction_root
+        ),
+        "command_argv": lifecycle_argv(
+            target, target, current_backup, host_contract, transaction_root
+        ),
+        "command_shell": "powershell" if os.name == "nt" else "posix",
+        "runtime": str((target / "scripts" / "experience_loop.py").resolve()),
+        "onboarding_reference": str(
+            (target / "references" / "onboarding.md").resolve()
+        ),
+        "onboarding_prompt": onboarding_prompt(target),
+        "onboarding_state": "check_runtime_before_onboarding",
+        "rollback_available": (
+            current_backup is not None
+            and rollback_source_error(current_backup) is None
+        ),
+        "rollback_note": rollback_note(current_backup),
+        "filesystem_status": "managed-install-rollback-validated",
+        "runtime_validation_status": "required-from-installed-copy",
     }
 
 
@@ -1117,6 +1714,7 @@ def install(
     target: Path,
     force: bool,
     host_contract: dict[str, object],
+    requested_transaction_root: Optional[Path] = None,
 ) -> dict[str, object]:
     source = source.resolve()
     target = validate_target_path(target)
@@ -1125,10 +1723,19 @@ def install(
             raise RuntimeError(
                 "The active Skill directory is incomplete or is missing a valid install marker."
             )
-    plan = install_plan(target, force, host_contract)
+    plan = install_plan(
+        target,
+        force,
+        host_contract,
+        requested_transaction_root=requested_transaction_root,
+    )
     blockers = plan["blockers"]
     if isinstance(blockers, list) and blockers:
         raise RuntimeError(" ".join(str(blocker) for blocker in blockers))
+    transaction_root_value = plan.get("transaction_root")
+    if not isinstance(transaction_root_value, str) or not transaction_root_value:
+        raise RuntimeError("The installation plan has no usable transaction root.")
+    transaction_root = Path(transaction_root_value)
     if _same_path(source, target):
         return {
             "status": "already-active",
@@ -1137,10 +1744,17 @@ def install(
             "source_provenance": source_provenance(source),
             "target": str(target),
             "backup": None,
+            "backup_root": str(transaction_root),
+            "transaction_root": str(transaction_root),
+            "transaction_capability": "verified",
             "migrated_legacy_backups": [],
             **host_receipt(host_contract),
-            "commands": lifecycle_commands(source, target, None, host_contract),
-            "command_argv": lifecycle_argv(source, target, None, host_contract),
+            "commands": lifecycle_commands(
+                source, target, None, host_contract, transaction_root
+            ),
+            "command_argv": lifecycle_argv(
+                source, target, None, host_contract, transaction_root
+            ),
             "command_shell": "powershell" if os.name == "nt" else "posix",
             "runtime": str((target / "scripts" / "experience_loop.py").resolve()),
             "onboarding_reference": str(
@@ -1156,28 +1770,56 @@ def install(
 
     discovery_roots = [Path(str(root)) for root in host_contract["discovery_roots"]]
     target.parent.mkdir(parents=True, exist_ok=True)
-    backup_root = Path(str(plan["backup_root"]))
-    backup_root.mkdir(parents=True, exist_ok=True)
-    backup_root = backup_root_for_target(target)
-    staging = Path(tempfile.mkdtemp(prefix=".install-", dir=str(backup_root)))
+    transaction_root.mkdir(parents=True, exist_ok=True)
+    transaction_root = validate_transaction_root(
+        target, transaction_root, discovery_roots
+    )
+    transaction_id = uuid4().hex
+    staging = Path(
+        tempfile.mkdtemp(prefix=f".install-{transaction_id[:8]}-", dir=str(transaction_root))
+    )
     backup: Optional[Path] = None
     migrated: list[tuple[Path, Path]] = []
+    target_manifest_parked = False
+    staging_moved = False
     activated = False
     try:
-        copy_runtime(source, staging, host_contract)
-        if not is_managed_install(staging):
+        copy_runtime(
+            source,
+            staging,
+            host_contract,
+            transaction_root,
+            transaction_id,
+        )
+        if not is_managed_install(staging, DORMANT_SKILL_MANIFEST):
             raise RuntimeError("Staged Skill failed managed-install validation.")
 
-        refreshed_plan = install_plan(target, force, host_contract)
+        refreshed_plan = install_plan(
+            target,
+            force,
+            host_contract,
+            requested_transaction_root=transaction_root,
+        )
         refreshed_blockers = refreshed_plan["blockers"]
         if isinstance(refreshed_blockers, list) and refreshed_blockers:
             raise RuntimeError(" ".join(str(blocker) for blocker in refreshed_blockers))
-        migrated = migrate_legacy_sibling_backups(target)
+        install_lifecycle_manager(transaction_root)
+        migrated = migrate_legacy_sibling_backups(target, transaction_root)
         ensure_no_other_discoverable_install(target, discovery_roots)
         if target.exists():
-            backup = _move_to_backup(target, backup_root, SKILL_NAME)
+            target_manifest_parked = park_skill_manifest(target)
+            try:
+                backup = _move_to_backup(target, transaction_root, SKILL_NAME)
+            except Exception:
+                if target_manifest_parked and target.exists():
+                    activate_parked_skill_manifest(target)
+                    target_manifest_parked = False
+                raise
         staging.replace(target)
-        activated = True
+        staging_moved = True
+        activated = activate_parked_skill_manifest(target)
+        if managed_transaction_id(target) != transaction_id:
+            raise RuntimeError("Activated Skill does not belong to this transaction.")
         discovered = discoverable_installations(target, discovery_roots)
         if len(discovered) != 1 or not _same_path(discovered[0], target):
             raise RuntimeError(
@@ -1186,25 +1828,62 @@ def install(
     except Exception as exc:
         recovery_errors: list[str] = []
         try:
-            if activated and target.exists() and is_managed_install(target):
+            if staging_moved and target.exists():
+                installed_transaction = managed_transaction_id(
+                    target,
+                    "SKILL.md" if activated else DORMANT_SKILL_MANIFEST,
+                )
+                if installed_transaction != transaction_id:
+                    raise RuntimeError(
+                        "Refusing to remove a target not created by this transaction."
+                    )
                 shutil.rmtree(target)
+            elif target_manifest_parked and target.exists() and backup is None:
+                activate_parked_skill_manifest(target)
             if not target.exists() and backup is not None and backup.exists():
                 backup.replace(target)
+                activate_parked_skill_manifest(target)
         except Exception as recovery_exc:
             recovery_errors.append(f"target restore failed: {recovery_exc}")
         try:
             restore_legacy_sibling_backups(migrated)
         except Exception as recovery_exc:
             recovery_errors.append(f"legacy-backup restore failed: {recovery_exc}")
+        if staging.exists():
+            try:
+                shutil.rmtree(staging)
+            except OSError as recovery_exc:
+                recovery_errors.append(f"staging cleanup failed: {recovery_exc}")
         if recovery_errors:
             raise RuntimeError(
                 f"Installation failed: {exc}. Recovery also failed: "
                 + "; ".join(recovery_errors)
             ) from exc
         raise
-    finally:
+    else:
         if staging.exists():
-            shutil.rmtree(staging, ignore_errors=True)
+            try:
+                shutil.rmtree(staging)
+            except OSError as cleanup_exc:
+                raise RuntimeError(
+                    f"Could not remove staging directory: {cleanup_exc}"
+                ) from cleanup_exc
+
+    cleanup_warnings: list[str] = []
+    if backup is None and not migrated:
+        manager_installer, manager_uninstaller = lifecycle_manager_paths(
+            transaction_root
+        )
+        for manager in (manager_installer, manager_uninstaller):
+            if manager.exists():
+                try:
+                    manager.unlink()
+                except OSError as cleanup_exc:
+                    cleanup_warnings.append(
+                        f"Installed Skill is active, but lifecycle cleanup failed for "
+                        f"{manager}: {cleanup_exc}"
+                    )
+        cleanup_empty_transaction_root(transaction_root)
 
     return {
         "status": "installed",
@@ -1213,12 +1892,20 @@ def install(
         "source_provenance": source_provenance(source),
         "target": str(target),
         "backup": str(backup) if backup else None,
+        "backup_root": str(transaction_root),
+        "transaction_root": str(transaction_root),
+        "transaction_capability": "verified",
+        "warnings": cleanup_warnings,
         "migrated_legacy_backups": [
             str(destination) for _, destination in migrated
         ],
         **host_receipt(host_contract),
-        "commands": lifecycle_commands(source, target, backup, host_contract),
-        "command_argv": lifecycle_argv(source, target, backup, host_contract),
+        "commands": lifecycle_commands(
+            source, target, backup, host_contract, transaction_root
+        ),
+        "command_argv": lifecycle_argv(
+            source, target, backup, host_contract, transaction_root
+        ),
         "command_shell": "powershell" if os.name == "nt" else "posix",
         "runtime": str((target / "scripts" / "experience_loop.py").resolve()),
         "onboarding_reference": str(
@@ -1247,14 +1934,63 @@ def main() -> int:
         else:
             print("安装失败 / Installation failed: " + message, file=sys.stderr)
         return 4
-    source = repo_root()
     exit_code = 0
     try:
-        validate_source(source)
         target = validate_target_path(args.target)
         host_contract = effective_host_contract(args, target)
-        if args.dry_run:
-            plan = install_plan(target, args.force, host_contract)
+        if args.verify_only:
+            if args.restore_from is not None or args.dry_run or args.force:
+                raise RuntimeError(
+                    "--verify-only cannot be combined with --restore-from, --dry-run, or --force."
+                )
+            source = repo_root()
+            validate_source(source)
+            if not _same_path(source, target):
+                raise RuntimeError(
+                    "--verify-only must run from the exact host-managed target copy."
+                )
+            ensure_no_other_discoverable_install(
+                target,
+                [Path(str(root)) for root in host_contract["discovery_roots"]],
+            )
+            result = {
+                "status": "host-managed-copy-validated",
+                "version": read_version(source),
+                "source": str(source),
+                "source_provenance": source_provenance(source),
+                "target": str(target),
+                "install_manager": "host-native",
+                **host_receipt(host_contract),
+                "runtime": str((target / "scripts" / "experience_loop.py").resolve()),
+                "onboarding_reference": str(
+                    (target / "references" / "onboarding.md").resolve()
+                ),
+                "onboarding_prompt": onboarding_prompt(target),
+                "onboarding_state": "check_runtime_before_onboarding",
+                "filesystem_status": "complete-host-managed-copy-validated",
+                "runtime_validation_status": "required-from-installed-copy",
+                "lifecycle_owner": "current-host-native-install-manager",
+            }
+        elif args.restore_from is not None:
+            if args.dry_run:
+                raise RuntimeError("--restore-from cannot be combined with --dry-run.")
+            transaction_root = args.transaction_root or args.restore_from.parent
+            result = restore_backup(
+                target,
+                args.restore_from,
+                host_contract,
+                transaction_root,
+            )
+        else:
+            source = repo_root()
+            validate_source(source)
+        if not args.verify_only and args.restore_from is None and args.dry_run:
+            plan = install_plan(
+                target,
+                args.force,
+                host_contract,
+                requested_transaction_root=args.transaction_root,
+            )
             blocked = bool(plan["blockers"])
             result: dict[str, object] = {
                 "status": "blocked" if blocked else "dry-run",
@@ -1262,7 +1998,9 @@ def main() -> int:
                 "source": str(source),
                 "source_provenance": source_provenance(source),
                 "target": str(target),
-                "backup_root": str(plan["backup_root"]),
+                "backup_root": plan["backup_root"],
+                "transaction_root": plan["transaction_root"],
+                "transaction_capability": plan["transaction_capability"],
                 "install_plan": plan,
                 **host_receipt(host_contract),
                 "filesystem_status": "preview-only",
@@ -1270,8 +2008,14 @@ def main() -> int:
             }
             if blocked:
                 exit_code = 4
-        else:
-            result = install(source, target, args.force, host_contract)
+        elif not args.verify_only and args.restore_from is None:
+            result = install(
+                source,
+                target,
+                args.force,
+                host_contract,
+                requested_transaction_root=args.transaction_root,
+            )
     except Exception as exc:  # User-facing CLI boundary.
         if args.json:
             print(json.dumps({"status": "error", "error": str(exc)}, ensure_ascii=False))
@@ -1307,6 +2051,11 @@ def main() -> int:
                 print(f"  rollback: {commands['rollback']}")
             elif result.get("rollback_note"):
                 print(f"  rollback unavailable: {result['rollback_note']}")
+        warnings = result.get("warnings")
+        if isinstance(warnings, list) and warnings:
+            print("警告 / Warnings:")
+            for warning in warnings:
+                print(f"  - {warning}")
         if result["status"] == "blocked":
             print("预演被阻止 / Preview blocked:")
             for blocker in result["install_plan"]["blockers"]:
