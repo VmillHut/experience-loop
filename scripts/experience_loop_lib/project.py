@@ -20,8 +20,8 @@ from .common import (
     stable_id,
     utc_now,
 )
+from .controls import load_controls
 from .path_policy import GitIgnoreMatcher, PathPolicyError, is_reparse_point, safe_resolve
-from .profile import load_profile
 from .storage import Store
 
 
@@ -727,8 +727,7 @@ def scan_project(
             details={"path": str(requested_root), "reason": str(exc)},
         ) from exc
 
-    profile = load_profile(store)
-    privacy = profile.get("privacy", "normal")
+    privacy = load_controls(store)["privacy"]
     content_read_allowed = privacy == "normal" or (
         privacy == "restricted" and bool(content_access_confirmed)
     )

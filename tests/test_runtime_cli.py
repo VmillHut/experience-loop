@@ -1,9 +1,12 @@
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
+import subprocess
 import sys
 import tempfile
+from typing import Optional
 import unittest
 
 
@@ -11,7 +14,7 @@ TESTS_DIR = Path(__file__).resolve().parent
 if str(TESTS_DIR) not in sys.path:
     sys.path.insert(0, str(TESTS_DIR))
 
-from helpers import assert_ok, payload, run_cli, tree_fingerprint
+from helpers import CLI, assert_ok, payload, run_cli, tree_fingerprint
 
 
 class RuntimeCliTests(unittest.TestCase):
@@ -92,6 +95,9 @@ class RuntimeCliTests(unittest.TestCase):
             )
             first_data = assert_ok(self, first)
             self.assertFalse(first_data["already_initialized"])
+            self.assertEqual(first_data["host_activation"], "not_evaluated")
+            self.assertIn("本地状态已初始化", first_data["message"])
+            self.assertNotIn("已可用", first_data["message"])
             profile = first_data["profile"]
             self.assertEqual(profile["name"], "小林")
             self.assertEqual(profile["role"], "backend-engineer")
@@ -130,6 +136,7 @@ class RuntimeCliTests(unittest.TestCase):
 
             second_data = assert_ok(self, run_cli(home, "setup"))
             self.assertTrue(second_data["already_initialized"])
+            self.assertEqual(second_data["host_activation"], "not_evaluated")
             self.assertEqual(second_data["next_actions"], [])
             self.assertIn("不重复新手教学", second_data["message"])
             second_profile = second_data["profile"]
@@ -151,6 +158,29 @@ class RuntimeCliTests(unittest.TestCase):
                 "created_at",
             ):
                 self.assertEqual(second_profile[field], profile[field], field)
+
+    def test_source_checkout_first_setup_requires_explicit_developer_opt_in(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="experience-loop-source-guard-") as raw:
+            home = Path(raw) / "data"
+
+            refused = run_cli(home, "setup", developer_source=False)
+            self.assertEqual(refused.returncode, 4, refused.stdout or refused.stderr)
+            envelope = payload(refused)
+            self.assertFalse(envelope["ok"])
+            error = envelope["error"]
+            self.assertIn("仓库文件不是宿主激活", error["message"])
+            self.assertEqual(
+                error["details"]["developer_override"],
+                "EXPERIENCE_LOOP_DEVELOPER_SOURCE=1",
+            )
+            self.assertEqual(
+                error["details"]["host_activation"], "not_evaluated"
+            )
+            self.assertFalse(home.exists())
+
+            allowed = assert_ok(self, run_cli(home, "setup"))
+            self.assertEqual(allowed["host_activation"], "not_evaluated")
+            self.assertTrue((home / "state.json").is_file())
 
     def test_four_modes_and_legacy_profiles_normalize_without_user_migration(self) -> None:
         with tempfile.TemporaryDirectory(prefix="experience-loop-mode-migration-") as raw:
@@ -189,6 +219,9 @@ class RuntimeCliTests(unittest.TestCase):
                 self.assertEqual(switched["mode"], expected)
 
             profile_path = home / "profile.json"
+            # A genuine legacy install has no controls.json. Once controls exist,
+            # profile.mode is only a compatibility mirror and cannot override it.
+            (home / "controls.json").unlink()
             persisted = json.loads(profile_path.read_text(encoding="utf-8"))
             for legacy_mode, expected in (
                 ("ship", "auto"),
@@ -214,16 +247,21 @@ class RuntimeCliTests(unittest.TestCase):
             self.assertEqual(uninitialized["privacy"], "normal")
             self.assertFalse(home.exists())
 
+            refused = run_cli(home, "mode", "off")
+            self.assertEqual(refused.returncode, 2, refused.stdout or refused.stderr)
+            self.assertFalse(home.exists())
+
+            privacy_only = assert_ok(
+                self, run_cli(home, "setup", "--privacy", "restricted")
+            )
+            self.assertFalse(privacy_only["profile"]["customized"])
+
             saved_off = assert_ok(self, run_cli(home, "mode", "off"))
             self.assertEqual(saved_off["mode"], "off")
             self.assertTrue(saved_off["persisted"])
             self.assertFalse(saved_off["records_learning_events"])
             self.assertTrue(home.exists())
 
-            privacy_only = assert_ok(
-                self, run_cli(home, "setup", "--privacy", "restricted")
-            )
-            self.assertFalse(privacy_only["profile"]["customized"])
             privacy_controls = assert_ok(self, run_cli(home, "mode"))
             self.assertFalse(privacy_controls["profile_customized"])
             self.assertEqual(privacy_controls["privacy"], "restricted")
@@ -248,6 +286,172 @@ class RuntimeCliTests(unittest.TestCase):
             self.assertEqual(persisted["privacy"], "restricted")
             self.assertTrue(persisted["records_learning_events"])
 
+    def test_control_command_separates_default_mode_from_activation_scope(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="experience-loop-control-cli-") as raw:
+            home = Path(raw) / "data"
+
+            defaults = assert_ok(self, run_cli(home, "control", "show"))
+            self.assertEqual(defaults["default_mode"], "auto")
+            self.assertEqual(defaults["activation_scope"], "explicit")
+            self.assertFalse(defaults["persisted"])
+            self.assertFalse(home.exists())
+
+            refused = run_cli(
+                home,
+                "control",
+                "set",
+                "--default-mode",
+                "focus",
+                "--activation-scope",
+                "project",
+                "--privacy",
+                "restricted",
+            )
+            self.assertEqual(refused.returncode, 2, refused.stdout or refused.stderr)
+            self.assertFalse(home.exists())
+
+            assert_ok(self, run_cli(home, "setup"))
+            saved = assert_ok(
+                self,
+                run_cli(
+                    home,
+                    "control",
+                    "set",
+                    "--default-mode",
+                    "focus",
+                    "--activation-scope",
+                    "project",
+                    "--privacy",
+                    "restricted",
+                ),
+            )
+            self.assertEqual(saved["default_mode"], "focus")
+            self.assertEqual(saved["activation_scope"], "project")
+            self.assertEqual(saved["privacy"], "restricted")
+            self.assertTrue(saved["preference_saved"])
+            self.assertEqual(saved["host_activation"], "not_evaluated")
+            self.assertEqual(
+                saved["adapter"]["status"], "pending_new_session_verification"
+            )
+            self.assertTrue((home / "profile.json").is_file())
+            self.assertTrue((home / "controls.json").is_file())
+
+            status = assert_ok(self, run_cli(home, "status"))
+            self.assertEqual(status["mode"], "focus")
+            self.assertEqual(status["activation_scope"], "project")
+            self.assertEqual(status["privacy"], "restricted")
+
+            changed = assert_ok(
+                self,
+                run_cli(
+                    home,
+                    "control",
+                    "set",
+                    "--activation-scope",
+                    "global",
+                ),
+            )
+            self.assertEqual(changed["default_mode"], "focus")
+            self.assertEqual(changed["activation_scope"], "global")
+
+            empty_home = Path(raw) / "empty-control-data"
+            rejected = run_cli(empty_home, "control", "set")
+            self.assertEqual(rejected.returncode, 2, rejected.stdout)
+            self.assertFalse(payload(rejected)["ok"])
+            self.assertFalse(empty_home.exists())
+
+    def test_custom_home_automatic_scope_reports_persistent_adapter_requirement(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="experience-loop-adapter-home-") as raw:
+            root = Path(raw)
+            user_home = root / "user"
+            custom_home = root / "custom-data"
+            user_home.mkdir()
+
+            def invoke(
+                *args: str, environment_home: Optional[Path] = None
+            ) -> dict[str, object]:
+                env = os.environ.copy()
+                env.update(
+                    {
+                        "HOME": str(user_home),
+                        "USERPROFILE": str(user_home),
+                        "HOMEDRIVE": user_home.drive,
+                        "HOMEPATH": str(user_home)[len(user_home.drive) :],
+                        "PYTHONUTF8": "1",
+                        "EXPERIENCE_LOOP_DEVELOPER_SOURCE": "1",
+                    }
+                )
+                if environment_home is None:
+                    env.pop("EXPERIENCE_LOOP_HOME", None)
+                else:
+                    env["EXPERIENCE_LOOP_HOME"] = str(environment_home)
+                completed = subprocess.run(
+                    [
+                        sys.executable,
+                        "-B",
+                        str(CLI),
+                        *args,
+                        "--home",
+                        str(custom_home),
+                        "--json",
+                    ],
+                    cwd=TESTS_DIR.parent,
+                    env=env,
+                    text=True,
+                    encoding="utf-8",
+                    errors="replace",
+                    capture_output=True,
+                    check=False,
+                )
+                return assert_ok(self, completed)
+
+            setup = invoke("setup", "--activation-scope", "project")
+            adapter = setup["adapter"]
+            self.assertIsInstance(adapter, dict)
+            assert isinstance(adapter, dict)
+            self.assertEqual(adapter["status"], "configuration_required")
+            self.assertEqual(
+                adapter["warning"]["code"],
+                "automatic_routing_custom_home_not_persistent",
+            )
+            self.assertEqual(
+                adapter["requirement"],
+                {
+                    "kind": "persist_environment_variable",
+                    "name": "EXPERIENCE_LOOP_HOME",
+                    "must_match_runtime_home": True,
+                    "applies_to": ["project", "global"],
+                },
+            )
+            self.assertFalse(adapter["explicit_invocation_affected"])
+            self.assertNotIn(str(custom_home), json.dumps(adapter, ensure_ascii=False))
+
+            shown = invoke("control", "show")
+            self.assertIn("adapter", shown)
+            changed = invoke(
+                "control",
+                "set",
+                "--activation-scope",
+                "global",
+                environment_home=root / "different-data",
+            )
+            self.assertIn("adapter", changed)
+
+            matched = invoke("control", "show", environment_home=custom_home)
+            self.assertEqual(
+                matched["adapter"]["status"],
+                "pending_new_session_verification",
+            )
+            self.assertTrue(matched["adapter"]["preference_saved"])
+            self.assertEqual(matched["adapter"]["hook_observed"], "unknown")
+            self.assertEqual(
+                matched["adapter"]["host_activation"], "not_evaluated"
+            )
+            explicit = invoke(
+                "control", "set", "--activation-scope", "explicit"
+            )
+            self.assertNotIn("adapter", explicit)
+
     def test_stale_role_marker_is_reconciled_from_the_role_sentinel(self) -> None:
         with tempfile.TemporaryDirectory(prefix="experience-loop-role-roundtrip-") as raw:
             home = Path(raw) / "data"
@@ -263,10 +467,14 @@ class RuntimeCliTests(unittest.TestCase):
                 json.dumps(stored, ensure_ascii=False), encoding="utf-8"
             )
             controls = assert_ok(self, run_cli(home, "mode"))
-            self.assertTrue(controls["profile_customized"])
+            self.assertFalse(controls["profile_customized"])
             shown = assert_ok(self, run_cli(home, "profile", "show"))["profile"]
             self.assertEqual(shown["role"], "backend-engineer")
             self.assertTrue(shown["customized"])
+            assert_ok(self, run_cli(home, "profile", "update"))
+            self.assertTrue(
+                assert_ok(self, run_cli(home, "mode"))["profile_customized"]
+            )
 
             # Sentinel priority also reconciles an older reset that leaves true.
             stored["role"] = "software-developer"
@@ -276,10 +484,14 @@ class RuntimeCliTests(unittest.TestCase):
                 json.dumps(stored, ensure_ascii=False), encoding="utf-8"
             )
             controls = assert_ok(self, run_cli(home, "mode"))
-            self.assertFalse(controls["profile_customized"])
+            self.assertTrue(controls["profile_customized"])
             shown = assert_ok(self, run_cli(home, "profile", "show"))["profile"]
             self.assertIsNone(shown["role"])
             self.assertFalse(shown["customized"])
+            assert_ok(self, run_cli(home, "profile", "update"))
+            self.assertFalse(
+                assert_ok(self, run_cli(home, "mode"))["profile_customized"]
+            )
 
     def test_mode_off_ignores_unrelated_profile_content_corruption(self) -> None:
         with tempfile.TemporaryDirectory(prefix="experience-loop-mode-corrupt-") as raw:
@@ -393,6 +605,125 @@ class RuntimeCliTests(unittest.TestCase):
             review = assert_ok(self, run_cli(home, "ledger", "review"))
             self.assertEqual(review["total_events"], 0)
             self.assertEqual(review["xp_total"], 0)
+
+    def test_ledger_uses_task_resolved_mode_before_the_persisted_default(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="experience-loop-ledger-mode-") as raw:
+            home = Path(raw) / "data"
+            assert_ok(self, run_cli(home, "setup", "--mode", "off"))
+
+            recorded = assert_ok(
+                self,
+                run_cli(
+                    home,
+                    "ledger",
+                    "record",
+                    "--kind",
+                    "decision",
+                    "--summary",
+                    "task-scoped deep decision",
+                    "--resolved-mode",
+                    "deep",
+                ),
+            )
+            self.assertTrue(recorded["recorded"])
+            self.assertEqual(recorded["event"]["mode"], "deep")
+
+            ledger = home / "ledger" / "events.jsonl"
+            before = ledger.read_bytes()
+            skipped = assert_ok(
+                self,
+                run_cli(
+                    home,
+                    "ledger",
+                    "record",
+                    "--kind",
+                    "decision",
+                    "--summary",
+                    "task-scoped delivery only",
+                    "--resolved-mode",
+                    "off",
+                ),
+            )
+            self.assertFalse(skipped["recorded"])
+            self.assertEqual(skipped["reason"], "mode_off")
+            self.assertEqual(ledger.read_bytes(), before)
+
+    def test_off_short_circuits_transfer_validation_and_prior_ledger_reads(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="experience-loop-ledger-off-transfer-") as raw:
+            home = Path(raw) / "data"
+            assert_ok(self, run_cli(home, "setup", "--mode", "off"))
+            ledger = home / "ledger" / "events.jsonl"
+            ledger.write_text("{broken-ledger\n", encoding="utf-8")
+            before = ledger.read_bytes()
+
+            saved_off = assert_ok(
+                self,
+                run_cli(
+                    home,
+                    "ledger",
+                    "record",
+                    "--kind",
+                    "transfer",
+                    "--summary",
+                    "must be ignored before transfer validation",
+                ),
+            )
+            self.assertFalse(saved_off["recorded"])
+            self.assertEqual(saved_off["reason"], "mode_off")
+
+            saved_off_without_history_read = assert_ok(
+                self,
+                run_cli(
+                    home,
+                    "ledger",
+                    "record",
+                    "--kind",
+                    "transfer",
+                    "--summary",
+                    "saved off must not read prior ledger",
+                    "--prior-event",
+                    "evt_missing",
+                    "--context-difference",
+                    "new context",
+                    "--concept",
+                    "retry-budget",
+                    "--evidence",
+                    "test:test_retry",
+                    "--outcome",
+                    "verified",
+                ),
+            )
+            self.assertFalse(saved_off_without_history_read["recorded"])
+            self.assertEqual(saved_off_without_history_read["reason"], "mode_off")
+
+            assert_ok(self, run_cli(home, "mode", "auto"))
+            task_off = assert_ok(
+                self,
+                run_cli(
+                    home,
+                    "ledger",
+                    "record",
+                    "--kind",
+                    "transfer",
+                    "--summary",
+                    "must not read prior ledger",
+                    "--prior-event",
+                    "evt_missing",
+                    "--context-difference",
+                    "new context",
+                    "--concept",
+                    "retry-budget",
+                    "--evidence",
+                    "test:test_retry",
+                    "--outcome",
+                    "verified",
+                    "--resolved-mode",
+                    "off",
+                ),
+            )
+            self.assertFalse(task_off["recorded"])
+            self.assertEqual(task_off["reason"], "mode_off")
+            self.assertEqual(ledger.read_bytes(), before)
 
     def test_ledger_groups_evidence_by_capability_without_scoring_gaps(self) -> None:
         with tempfile.TemporaryDirectory(prefix="experience-loop-capability-") as raw:
@@ -647,6 +978,9 @@ class RuntimeCliTests(unittest.TestCase):
 
             shown = assert_ok(self, run_cli(home, "profile", "show"))["profile"]
             self.assertTrue(shown["customized"])
+            controls = assert_ok(self, run_cli(home, "mode"))
+            self.assertFalse(controls["profile_customized"])
+            assert_ok(self, run_cli(home, "profile", "update"))
             controls = assert_ok(self, run_cli(home, "mode"))
             self.assertTrue(controls["profile_customized"])
 

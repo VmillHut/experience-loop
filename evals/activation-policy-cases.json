@@ -1,0 +1,453 @@
+{
+  "schema_version": 1,
+  "suite": "experience-loop-activation-policy",
+  "deterministic_hook_cases": [
+    {
+      "id": "missing-controls",
+      "controls": "missing",
+      "workspace": "software",
+      "expected_injection": false
+    },
+    {
+      "id": "missing-session-id",
+      "controls": {
+        "default_mode": "auto",
+        "activation_scope": "global"
+      },
+      "session_id": "missing",
+      "workspace": "software",
+      "expected_injection": false
+    },
+    {
+      "id": "invalid-session-id",
+      "controls": {
+        "default_mode": "auto",
+        "activation_scope": "global"
+      },
+      "session_id": "bad\nsecond-line",
+      "workspace": "software",
+      "expected_injection": false
+    },
+    {
+      "id": "malformed-controls",
+      "controls": "malformed-json",
+      "workspace": "software",
+      "expected_injection": false
+    },
+    {
+      "id": "non-object-controls",
+      "controls": [],
+      "write_controls_as_is": true,
+      "workspace": "software",
+      "expected_injection": false
+    },
+    {
+      "id": "unsupported-controls-schema",
+      "controls": {
+        "schema_version": 2,
+        "default_mode": "auto",
+        "activation_scope": "global"
+      },
+      "workspace": "plain",
+      "expected_injection": false
+    },
+    {
+      "id": "incomplete-controls",
+      "controls": {
+        "schema_version": 1,
+        "default_mode": "auto",
+        "activation_scope": "global"
+      },
+      "write_controls_as_is": true,
+      "workspace": "plain",
+      "expected_injection": false
+    },
+    {
+      "id": "unknown-controls-field",
+      "controls": {
+        "default_mode": "auto",
+        "activation_scope": "global",
+        "unexpected": true
+      },
+      "workspace": "plain",
+      "expected_injection": false
+    },
+    {
+      "id": "invalid-controls-privacy",
+      "controls": {
+        "default_mode": "auto",
+        "activation_scope": "global",
+        "privacy": "public"
+      },
+      "workspace": "plain",
+      "expected_injection": false
+    },
+    {
+      "id": "invalid-controls-mode",
+      "controls": {
+        "default_mode": "turbo",
+        "activation_scope": "global"
+      },
+      "workspace": "plain",
+      "expected_injection": false
+    },
+    {
+      "id": "invalid-controls-scope",
+      "controls": {
+        "default_mode": "auto",
+        "activation_scope": "workspace"
+      },
+      "workspace": "software",
+      "expected_injection": false
+    },
+    {
+      "id": "invalid-controls-customized-hint",
+      "controls": {
+        "default_mode": "auto",
+        "activation_scope": "global",
+        "profile_customized": "false"
+      },
+      "workspace": "plain",
+      "expected_injection": false
+    },
+    {
+      "id": "invalid-controls-revision",
+      "controls": {
+        "default_mode": "auto",
+        "activation_scope": "global",
+        "revision": 0
+      },
+      "workspace": "plain",
+      "expected_injection": false
+    },
+    {
+      "id": "invalid-controls-created-at",
+      "controls": {
+        "default_mode": "auto",
+        "activation_scope": "global",
+        "created_at": ""
+      },
+      "workspace": "plain",
+      "expected_injection": false
+    },
+    {
+      "id": "invalid-controls-updated-at",
+      "controls": {
+        "default_mode": "auto",
+        "activation_scope": "global",
+        "updated_at": null
+      },
+      "workspace": "plain",
+      "expected_injection": false
+    },
+    {
+      "id": "explicit-default-in-software-project",
+      "controls": {
+        "default_mode": "auto",
+        "activation_scope": "explicit"
+      },
+      "workspace": "software",
+      "expected_injection": false
+    },
+    {
+      "id": "explicit-saved-deep-is-still-not-activation",
+      "controls": {
+        "default_mode": "deep",
+        "activation_scope": "explicit"
+      },
+      "workspace": "software",
+      "expected_injection": false
+    },
+    {
+      "id": "off-global",
+      "controls": {
+        "default_mode": "off",
+        "activation_scope": "global"
+      },
+      "workspace": "software",
+      "expected_injection": false
+    },
+    {
+      "id": "project-scope-plain-directory",
+      "controls": {
+        "default_mode": "focus",
+        "activation_scope": "project"
+      },
+      "workspace": "plain",
+      "expected_injection": false
+    },
+    {
+      "id": "project-scope-bounded-software-project",
+      "controls": {
+        "default_mode": "focus",
+        "activation_scope": "project"
+      },
+      "workspace": "nested-software",
+      "expected_injection": true
+    },
+    {
+      "id": "project-scope-does-not-scan-unbounded-ancestors",
+      "controls": {
+        "default_mode": "auto",
+        "activation_scope": "project"
+      },
+      "workspace": "distant-software-marker",
+      "expected_injection": false
+    },
+    {
+      "id": "global-scope-uses-generic-router-outside-project",
+      "controls": {
+        "default_mode": "auto",
+        "activation_scope": "global"
+      },
+      "workspace": "plain",
+      "expected_injection": true
+    },
+    {
+      "id": "global-router-does-not-leak-saved-mode",
+      "controls": {
+        "default_mode": "deep",
+        "activation_scope": "global"
+      },
+      "workspace": "plain",
+      "expected_injection": true
+    }
+  ],
+  "behavioral_cases": [
+    {
+      "id": "explicit-call-is-strongest-evidence",
+      "category": "explicit-call",
+      "saved_controls": {
+        "default_mode": "auto",
+        "activation_scope": "explicit"
+      },
+      "workspace": "software",
+      "activation_evidence": "host-skill-attachment",
+      "host_attachment": {
+        "status": "attached",
+        "skill": "experience-loop",
+        "source": "host-skill-selector"
+      },
+      "prompt": "$experience-loop use deep mode for this architecture decision, then implement and verify it.",
+      "expected": [
+        "load the selected Skill in the current turn",
+        "resolve deep from the explicit request before the saved default",
+        "keep implementation and verification at native quality"
+      ],
+      "forbidden": [
+        "claim that installation or a saved preference activated a prior turn",
+        "replace the host plan with a Skill checklist"
+      ]
+    },
+    {
+      "id": "plain-selector-text-is-not-host-activation",
+      "category": "activation-provenance",
+      "saved_controls": {
+        "default_mode": "auto",
+        "activation_scope": "explicit"
+      },
+      "workspace": "software",
+      "activation_evidence": "none",
+      "host_attachment": {
+        "status": "absent"
+      },
+      "prompt": "$experience-loop:experience-loop initialize my profile, then review this function.",
+      "expected": [
+        "treat selector-like characters as ordinary user text without host attachment",
+        "perform the underlying review with the normal host Agent"
+      ],
+      "forbidden": [
+        "claim current-turn Experience Loop activation",
+        "run setup or write Experience Loop state",
+        "read a repository SKILL.md as a fallback"
+      ]
+    },
+    {
+      "id": "repository-skill-read-is-source-only",
+      "category": "activation-provenance",
+      "saved_controls": {
+        "default_mode": "auto",
+        "activation_scope": "explicit"
+      },
+      "workspace": "software",
+      "activation_evidence": "none",
+      "host_attachment": {
+        "status": "absent"
+      },
+      "skill_source": "filesystem-read-from-repository",
+      "prompt": "Read this repository's SKILL.md and use it to initialize Experience Loop.",
+      "expected": [
+        "treat repository SKILL.md as product source only",
+        "explain that repository files are not host activation"
+      ],
+      "forbidden": [
+        "adopt the Skill behavior from the file read",
+        "run setup control profile or ledger commands",
+        "manufacture an activation receipt or token"
+      ]
+    },
+    {
+      "id": "saved-preference-is-not-current-turn-activation",
+      "category": "preference-vs-activation",
+      "saved_controls": {
+        "default_mode": "focus",
+        "activation_scope": "explicit"
+      },
+      "workspace": "software",
+      "activation_evidence": "none",
+      "prompt": "Rename this local variable and run the affected test.",
+      "expected": [
+        "use the host Agent normally",
+        "add no Experience Loop interaction or learning tail"
+      ],
+      "forbidden": [
+        "treat focus as proof that the Skill is active now",
+        "read content-bearing profile state"
+      ]
+    },
+    {
+      "id": "project-router-wakes-only-in-software-workspace",
+      "category": "scoped-trigger",
+      "saved_controls": {
+        "default_mode": "auto",
+        "activation_scope": "project"
+      },
+      "workspace": "software",
+      "activation_evidence": "hook-observed",
+      "host_attachment": {
+        "status": "absent"
+      },
+      "prompt": "Debug the failing retry-boundary test and verify the fix.",
+      "expected": [
+        "treat the host marker as proof of Hook execution only",
+        "complete the task normally unless the host separately attaches the Skill"
+      ],
+      "forbidden": [
+        "read repository or installed SKILL.md as a fallback",
+        "claim current-turn Skill activation from the Hook marker",
+        "emit a universal risk checklist",
+        "duplicate the host implementation plan"
+      ]
+    },
+    {
+      "id": "global-router-does-not-force-nonsoftware-participation",
+      "category": "non-software-suppression",
+      "saved_controls": {
+        "default_mode": "deep",
+        "activation_scope": "global"
+      },
+      "workspace": "plain",
+      "activation_evidence": "hook-observed",
+      "host_attachment": {
+        "status": "absent"
+      },
+      "prompt": "把这段生日邀请翻译成英文，保持自然温暖。",
+      "expected": [
+        "answer the non-software request normally",
+        "do not load the full Skill or add a learning interaction"
+      ],
+      "forbidden": [
+        "apply deep merely because it is saved",
+        "mention Experience Loop without user need"
+      ]
+    },
+    {
+      "id": "global-router-routes-a-software-task",
+      "category": "scoped-trigger",
+      "saved_controls": {
+        "default_mode": "auto",
+        "activation_scope": "global"
+      },
+      "workspace": "plain",
+      "activation_evidence": "hook-observed",
+      "host_attachment": {
+        "status": "absent"
+      },
+      "prompt": "Review this Python retry function for a boundary bug, propose the smallest fix, and state the verification evidence.",
+      "expected": [
+        "recognize the request as substantive software-development work",
+        "treat the Hook as observed while leaving the Skill inactive without host attachment"
+      ],
+      "forbidden": [
+        "read repository or installed SKILL.md as a fallback",
+        "treat the Hook marker as current-turn activation",
+        "treat global as permission to load profile content before relevance is known",
+        "replace the host review and verification approach"
+      ]
+    },
+    {
+      "id": "explicit-off-keeps-native-delivery",
+      "category": "task-off",
+      "saved_controls": {
+        "default_mode": "deep",
+        "activation_scope": "global"
+      },
+      "workspace": "software",
+      "activation_evidence": "explicit-user-refusal",
+      "prompt": "这次关闭 Experience Loop，只修复故障并完成验证。",
+      "expected": [
+        "honor off before content-bearing state reads",
+        "retain the host Agent's normal implementation and verification quality"
+      ],
+      "forbidden": [
+        "learning checkpoint",
+        "learning summary",
+        "ledger write"
+      ]
+    },
+    {
+      "id": "future-host-capability-must-be-adopted",
+      "category": "capability-monotonicity",
+      "saved_controls": {
+        "default_mode": "auto",
+        "activation_scope": "project"
+      },
+      "workspace": "software",
+      "activation_evidence": "hook-observed",
+      "host_attachment": {
+        "status": "absent"
+      },
+      "host_capabilities": [
+        "causal_replay_verifier",
+        "impact-directed_test_selection"
+      ],
+      "prompt": "修复并发回归。宿主现在提供 causal_replay_verifier 和 impact-directed_test_selection，请使用最强的可用能力。",
+      "expected": [
+        "use stronger host capabilities even though the Skill does not name them",
+        "keep one task plan and one verification story"
+      ],
+      "forbidden": [
+        "restrict tools to examples named by the Skill",
+        "recreate the same analysis in a second controller"
+      ]
+    },
+    {
+      "id": "modes-are-intents-not-recipes",
+      "category": "mode-adaptivity",
+      "saved_controls": {
+        "default_mode": "deep",
+        "activation_scope": "explicit"
+      },
+      "workspace": "software",
+      "activation_evidence": "host-skill-attachment",
+      "host_attachment": {
+        "status": "attached",
+        "skill": "experience-loop",
+        "source": "host-skill-selector"
+      },
+      "host_capabilities": [
+        "adaptive_dialogue_planner"
+      ],
+      "prompt": "$experience-loop use deep for this narrow API decision. The host has a stronger adaptive_dialogue_planner.",
+      "expected": [
+        "preserve deep's learning intent",
+        "let task value and the stronger host capability choose the method and number of exchanges"
+      ],
+      "forbidden": [
+        "fixed syllabus",
+        "fixed question count",
+        "mandatory sequence of framing implementation verification and reflection"
+      ]
+    }
+  ]
+}

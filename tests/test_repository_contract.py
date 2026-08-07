@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import ast
 from pathlib import Path
 import re
 import subprocess
@@ -11,6 +12,66 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 class RepositoryContractTests(unittest.TestCase):
+    def test_development_compass_guides_source_work_and_stays_source_only(self) -> None:
+        compass_path = ROOT / "docs" / "DEVELOPMENT_COMPASS.md"
+        agents_path = ROOT / "AGENTS.md"
+        self.assertTrue(compass_path.is_file())
+        self.assertTrue(agents_path.is_file())
+
+        compass = compass_path.read_text(encoding="utf-8")
+        agents = agents_path.read_text(encoding="utf-8")
+        contributing = (ROOT / "CONTRIBUTING.md").read_text(encoding="utf-8")
+
+        self.assertIn("experience-loop-source-only: true", compass)
+        for heading in (
+            "## 2. 核心目标",
+            "## 3. 产品判断",
+            "## 4. 能力单调性与未来 AI",
+            "## 5. 设计边界",
+            "## 6. 宿主生命周期与激活真实性",
+            "## 8. 模拟测试与证据",
+            "## 9. 当前开发方向",
+            "## 10. 长期目标",
+            "## 12. 源码与用户安装边界",
+        ):
+            self.assertIn(heading, compass)
+
+        self.assertIn("docs/DEVELOPMENT_COMPASS.md", agents)
+        self.assertIn("completely once for the current task", agents)
+        self.assertIn("not as a fixed implementation checklist", agents)
+        self.assertIn("docs/DEVELOPMENT_COMPASS.md", contributing)
+
+        installer_path = ROOT / "scripts" / "install.py"
+        installer = installer_path.read_text(encoding="utf-8")
+        tree = ast.parse(installer, filename=str(installer_path))
+        assignments = {
+            target.id: ast.literal_eval(node.value)
+            for node in tree.body
+            if isinstance(node, ast.Assign)
+            for target in node.targets
+            if isinstance(target, ast.Name)
+            and target.id
+            in {"PORTABLE_SKILL_PAYLOAD_FILES", "SOURCE_ONLY_CONTAMINATION"}
+        }
+        payload = assignments["PORTABLE_SKILL_PAYLOAD_FILES"]
+        source_only = assignments["SOURCE_ONLY_CONTAMINATION"]
+        for excluded in (
+            "AGENTS.md",
+            "CONTRIBUTING.md",
+            "docs",
+            "evals",
+        ):
+            self.assertNotIn(excluded, payload)
+            self.assertIn(excluded, source_only)
+
+        plugin_builder = (ROOT / "scripts" / "build_plugin.py").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn(
+            "SKILL_PAYLOAD_FILES = install.PORTABLE_SKILL_PAYLOAD_FILES",
+            plugin_builder,
+        )
+
     def test_skill_has_complete_frontmatter_and_stays_progressive(self) -> None:
         skill = (ROOT / "SKILL.md").read_text(encoding="utf-8")
         self.assertNotIn("TODO", skill)
@@ -107,6 +168,7 @@ class RepositoryContractTests(unittest.TestCase):
         self.assertIn("real review pass over the Agent's proposal", workflow)
         self.assertIn("Use progressive scaffolding", workflow)
         self.assertIn("smallest coherent question set", workflow)
+
         self.assertIn("does not mean exposing every possible seam at once", workflow)
         self.assertIn("Do not announce a fixed syllabus", workflow)
         self.assertIn("not a round count, verbosity, or completed recipe", workflow)
@@ -136,23 +198,47 @@ class RepositoryContractTests(unittest.TestCase):
         self.assertIn("calibration context, not capability evidence", profiles)
         self.assertIn("Prefer what the user actually owned", profiles)
 
+    def test_metadata_only_task_grants_are_object_scoped_and_ephemeral(self) -> None:
+        safety = (ROOT / "references" / "safety-and-privacy.md").read_text(
+            encoding="utf-8"
+        )
+
+        for required in (
+            "Task-scoped content grants under `metadata-only`",
+            "exact canonical resource or source object",
+            "allowed content operation and its stated purpose",
+            "expires when that operation completes or the current task ends",
+            "Treat the grant as ephemeral",
+            "Do not write the grant or raw source content",
+            "does not authorize its parent directory, sibling files, a project scan",
+            "persistent index, export, network upload, or reuse in a later task",
+            "remain `metadata-only` and do not read content",
+        ):
+            self.assertIn(required, safety)
+
+        self.assertIn(
+            "weaker software manifests count only in the current working directory",
+            safety,
+        )
+        self.assertIn("`AGENTS.md` alone is never a project signal", safety)
+
     def test_readmes_define_ai_first_installation_and_all_four_modes(self) -> None:
         readme = (ROOT / "README.md").read_text(encoding="utf-8")
         readme_en = (ROOT / "README.en.md").read_text(encoding="utf-8")
 
-        self.assertIn("安装：把仓库交给 AI", readme)
+        self.assertIn("安装：Skill 核心 + 可选 OpenAI Plugin", readme)
         self.assertIn("docs/AI_INSTALL.md", readme)
-        install_prompt = (
-            "请根据 https://github.com/VmillHut/experience-loop 完成安装并初始化 "
-            "`experience-loop` Skill：优先使用当前宿主原生安装管理器；若某个命令、"
-            "目录或方式受限，请在现有权限内按 `docs/AI_INSTALL.md` 自动继续下一条安全路线，"
-            "直到完成文件、运行时和宿主发现验收，或确认所有可行路线都不可用。"
+        self.assertEqual(
+            readme.count(
+                "请根据 https://github.com/VmillHut/experience-loop 安装 `experience-loop`："
+            ),
+            1,
         )
-        self.assertEqual(readme.count(install_prompt), 1)
+        self.assertIn("不要在安装轮假定 Skill 已激活或开始初始化", readme)
         self.assertIn("宿主原生安装管理器", readme)
         self.assertIn("scripts/install.py --verify-only", readme)
         self.assertIn("单一路径失败不等于安装失败", readme)
-        self.assertIn("未提交且未改动目标的失败尝试不产生安装所有权", readme)
+        self.assertIn("一次未提交的失败尝试不锁定管理器", readme)
         self.assertIn("Git URL 本身不是安全安装协议", readme)
         self.assertNotIn('<img src="http', readme)
         self.assertNotIn("img.shields.io", readme)
@@ -160,7 +246,7 @@ class RepositoryContractTests(unittest.TestCase):
         self.assertIn("references/onboarding.md", readme)
         self.assertIn("平台兼容、安全边界与升级行为", readme)
         self.assertIn("不会把今天的宿主路径或调用语法写死", readme)
-        self.assertIn("文件、运行时、宿主发现三段独立证据", readme)
+        self.assertIn("文件、运行时、宿主发现和当前轮激活是四项独立事实", readme)
         self.assertNotIn("~/.claude/skills", readme)
         self.assertIn("先自动检测，再智能决策", readme)
         self.assertIn("Agent 根据当前证据持续决定", readme)
@@ -178,16 +264,19 @@ class RepositoryContractTests(unittest.TestCase):
             self.assertIn(f"<code>{mode}</code>", readme)
             self.assertIn(f"<code>{mode}</code>", readme_en)
 
-        self.assertIn("Installation: hand the repository to AI", readme_en)
+        self.assertIn("Installation: Skill core + optional OpenAI Plugin", readme_en)
         self.assertIn("docs/AI_INSTALL.en.md", readme_en)
         self.assertIn("Host compatibility, safety boundaries, and upgrades", readme_en)
         self.assertIn("never freezes today's host paths", readme_en)
-        self.assertIn("filesystem, runtime, and actual host discovery", readme_en)
+        self.assertIn(
+            "Filesystem, runtime, host discovery, and current-turn activation are independent facts",
+            readme_en,
+        )
         self.assertIn("host-native install manager", readme_en)
         self.assertIn("scripts/install.py --verify-only", readme_en)
         self.assertIn("One failed route is not an installation failure", readme_en)
         self.assertIn(
-            "uncommitted failed attempt that left the target unchanged acquires no ownership",
+            "An uncommitted failed attempt does not lock the manager",
             readme_en,
         )
         self.assertIn("A Git URL is not itself a safe installation protocol", readme_en)
@@ -236,7 +325,7 @@ class RepositoryContractTests(unittest.TestCase):
         self.assertLessEqual(len(install_en.splitlines()), 75)
 
         self.assertIn("不扫描项目、不读取资料", install_zh)
-        self.assertIn("所有字段都可选", install_zh)
+        self.assertIn("所有画像字段都可选", install_zh)
         self.assertIn("不要把宿主目录、安装参数或刷新方式转交给用户选择", install_zh)
         self.assertIn("最终只给一个当前必要的 `next_action`", install_zh)
         self.assertIn("宿主原生管理优先", install_zh)
@@ -254,11 +343,14 @@ class RepositoryContractTests(unittest.TestCase):
         self.assertIn("不要用静默降级伪造成功", install_zh)
         self.assertIn("rollback_available", install_zh)
         self.assertIn("rollback_note", install_zh)
-        self.assertIn("Every field is optional", install_en)
-        self.assertIn("does not also authorize", install_en.lower())
+        self.assertIn("$experience-loop:experience-loop", install_zh)
+        self.assertIn("standalone Skill 仍是 `$experience-loop`", install_zh)
+        self.assertIn("原样记录宿主实际验证过的 invocation", install_zh)
+        self.assertIn("every profile field is optional", install_en)
+        self.assertIn("does not authorize global instructions or a Hook", install_en)
         self.assertIn("rollback_note", install_en)
-        self.assertIn("real list, invocation, or new-session mechanism", install_en)
-        self.assertIn("Never remove profiles", install_en)
+        self.assertIn("real Skill/Plugin list, selector, or new-session mechanism", install_en)
+        self.assertIn("never authorizes deleting existing or unknown content", install_en)
         self.assertIn("Do not hand host-directory", install_en)
         self.assertIn("exactly one currently necessary `next_action`", install_en)
         self.assertIn("Prefer the host-native manager", install_en)
@@ -274,6 +366,9 @@ class RepositoryContractTests(unittest.TestCase):
         self.assertIn("identical target", install_en)
         self.assertIn("--replace-discovery-roots", install_en)
         self.assertIn("fresh `--host-evidence`", install_en)
+        self.assertIn("$experience-loop:experience-loop", install_en)
+        self.assertIn("a standalone Skill remains `$experience-loop`", install_en)
+        self.assertIn("record the invocation actually verified by the host verbatim", install_en)
 
         installer = (ROOT / "scripts" / "install.py").read_text(encoding="utf-8")
         for stale_host_fact in (
@@ -293,8 +388,9 @@ class RepositoryContractTests(unittest.TestCase):
         self.assertIn('choices=("markdown",)', router)
         self.assertIn("--expected-sha256", router)
         self.assertIn("Multiple Experience Loop router blocks", router)
-        self.assertIn("native planning, tools, engineering coverage", router)
-        self.assertIn("detect and decide instead of duplicating", router)
+        self.assertIn("stronger planning, reasoning, tools", router)
+        self.assertIn("decide adaptively from current evidence", router)
+        self.assertIn("Never impose a fixed checklist", router)
         for duplicated_controller_detail in (
             "optional checkpoint",
             "required judgment checkpoint",
@@ -307,26 +403,29 @@ class RepositoryContractTests(unittest.TestCase):
         self.assertIn("guidance_preference", onboarding)
         self.assertIn("Do not scan a project", onboarding)
         self.assertIn("Do not scan a project, ingest a document", onboarding)
-        self.assertIn("约 2 分钟的对话式使用教学", onboarding)
+        self.assertIn("不超过 60 秒的微型教学", onboarding)
         self.assertIn("自动检测任务风险和能力机会", onboarding)
+        self.assertIn("继续", onboarding)
+        self.assertIn("跳过", onboarding)
+        self.assertIn("本次只交付", onboarding)
         self.assertIn("大致从业年限或经验阶段", onboarding)
         self.assertIn("experience_context", onboarding)
         self.assertIn("不需要写简历", onboarding)
         self.assertIn("重点是你实际承担了什么", onboarding)
         self.assertIn("receipt commands do not remember a one-off `--home`", onboarding)
-        self.assertIn("required judgment", onboarding)
-        self.assertIn("short guided", onboarding)
-        for mode in ("auto", "focus", "deep", "off"):
-            self.assertIn(f"| `{mode}` |", onboarding)
+        self.assertIn("Do not follow the micro tutorial with a mode table", onboarding)
+        self.assertIn("task-scoped `focus`", onboarding)
+        self.assertIn("task-scoped `deep`", onboarding)
 
     def test_openai_metadata_is_utf8_and_invokes_the_skill(self) -> None:
         metadata = (ROOT / "agents" / "openai.yaml").read_text(encoding="utf-8")
         self.assertNotIn("�", metadata)
         self.assertIn('display_name: "Experience Loop"', metadata)
         self.assertIn("$experience-loop", metadata)
-        self.assertIn("allow_implicit_invocation: true", metadata)
-        self.assertIn("native planning, tools, engineering coverage", metadata)
-        self.assertIn("detect and decide instead of duplicating", metadata)
+        self.assertIn("allow_implicit_invocation: false", metadata)
+        self.assertNotIn("$experience-loop:experience-loop", metadata)
+        self.assertIn("stronger planning, reasoning, tools", metadata)
+        self.assertIn("without turning it into a fixed workflow", metadata)
         for duplicated_controller_detail in (
             "optional checkpoint",
             "required judgment checkpoint",

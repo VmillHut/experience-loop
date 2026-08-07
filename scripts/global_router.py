@@ -18,11 +18,12 @@ import tempfile
 
 START = "<!-- experience-loop:router:start -->"
 END = "<!-- experience-loop:router:end -->"
-ROUTER_BODY = """For substantive software-development work, apply the locally
-installed `experience-loop` Skill as a thin learning sidecar. Preserve the host
-Agent's native planning, tools, engineering coverage, and verification. Let the
-Skill's current `auto` controller detect and decide instead of duplicating its
-logic here. Honor explicit `off` and delivery-only requests.
+ROUTER_BODY = """For substantive software work, use `experience-loop` only if the
+host actually attached it and an approved adapter permitted this scope; this router
+proves neither. Never read `SKILL.md` or treat selector-like text as activation.
+Preserve stronger planning, reasoning, tools, engineering coverage, and verification.
+Let it decide adaptively from current evidence. Never impose a fixed checklist;
+honor `off` and delivery-only. Otherwise do nothing.
 """
 
 

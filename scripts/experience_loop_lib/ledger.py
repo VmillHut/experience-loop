@@ -8,8 +8,8 @@ import uuid
 from collections import Counter
 from typing import Any, Dict, Iterable, List, Optional
 
-from .common import CAPABILITIES, EXIT_IO, SCHEMA_VERSION, DataCorruptionError, ExperienceLoopError, utc_now
-from .profile import load_profile
+from .common import CAPABILITIES, EXIT_IO, SCHEMA_VERSION, DataCorruptionError, ExperienceLoopError, normalize_mode, utc_now
+from .controls import load_controls
 from .project import get_project
 from .storage import Store
 
@@ -80,14 +80,21 @@ def record_event(
     tags: Optional[Iterable[str]] = None,
     prior_event_id: Optional[str] = None,
     context_difference: Optional[str] = None,
+    resolved_mode: Optional[str] = None,
 ) -> Dict[str, Any]:
     store.require_initialized()
-    profile = load_profile(store)
-    if profile.get("mode") == "off":
+    task_mode = normalize_mode(resolved_mode) if resolved_mode is not None else None
+    if task_mode == "off":
         return {
             "recorded": False,
             "reason": "mode_off",
-            "message": "当前为 off 模式，未记录学习事件。",
+            "message": "本任务解析为 off 模式，未记录学习事件。",
+        }
+    if task_mode is None and load_controls(store)["default_mode"] == "off":
+        return {
+            "recorded": False,
+            "reason": "mode_off",
+            "message": "本任务解析为 off 模式，未记录学习事件。",
         }
     if kind not in KINDS:
         raise ExperienceLoopError("未知事件类型：%s" % kind)
@@ -137,7 +144,7 @@ def record_event(
         "id": "evt_%s" % uuid.uuid4().hex,
         "timestamp": utc_now(),
         "project_id": project_id,
-        "mode": profile.get("mode"),
+        "mode": None,
         "kind": kind,
         "summary": cleaned_summary,
         "evidence": clean_evidence,
@@ -159,8 +166,16 @@ def record_event(
             transfer_validated=transfer_validated,
         ),
     }
-    line = json.dumps(event, ensure_ascii=False, sort_keys=True) + "\n"
     with store.lock():
+        controls = load_controls(store)
+        event["mode"] = task_mode or controls["default_mode"]
+        if event["mode"] == "off":
+            return {
+                "recorded": False,
+                "reason": "mode_off",
+                "message": "本任务解析为 off 模式，未记录学习事件。",
+            }
+        line = json.dumps(event, ensure_ascii=False, sort_keys=True) + "\n"
         try:
             with store.ledger_path.open("a", encoding="utf-8", newline="\n") as handle:
                 handle.write(line)
@@ -172,7 +187,7 @@ def record_event(
                 code=EXIT_IO,
                 details={"path": str(store.ledger_path)},
             ) from exc
-    store.touch_state()
+        store.touch_state_locked()
     return {"recorded": True, "event": event}
 
 

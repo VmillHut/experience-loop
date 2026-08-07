@@ -17,7 +17,7 @@ SCRIPTS_DIR = TESTS_DIR.parent / "scripts"
 if str(SCRIPTS_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPTS_DIR))
 
-from helpers import assert_ok, run_cli
+from helpers import assert_ok, payload, run_cli
 from experience_loop_lib.common import APP_NAME, SCHEMA_VERSION
 
 
@@ -207,10 +207,12 @@ class ArchiveIntegrationTests(unittest.TestCase):
                     ).decode("utf-8")
                 )
             self.assertFalse(manifest["includes_raw_sources"])
+            self.assertEqual(manifest["archive_schema_version"], 2)
             self.assertEqual(exported["files"], len(archive_names))
             self.assertEqual(exported["payload_files"], len(manifest["entries"]))
             self.assertEqual(exported["files"], exported["payload_files"] + 1)
             self.assertNotIn("knowledge/library.sqlite", names)
+            self.assertIn("controls.json", names)
             self.assertFalse(any(name.startswith("knowledge/objects/") for name in names))
             self.assertIn("knowledge/portable-catalog.json", names)
             self.assertIn("knowledge/derived/source_bindings.json", names)
@@ -293,6 +295,64 @@ class ArchiveIntegrationTests(unittest.TestCase):
             self.assertIsNone(projects["projects"][0]["path"])
             review = assert_ok(self, run_cli(restored_home, "ledger", "review"))
             self.assertEqual(review["total_events"], 2)
+
+    def test_v1_archive_materializes_controls_from_the_legacy_profile(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="experience-loop-archive-v1-") as raw:
+            root = Path(raw)
+            source_home = root / "source"
+            archive_path = root / "legacy-v1.zip"
+            target_home = root / "target"
+            assert_ok(
+                self,
+                run_cli(
+                    source_home,
+                    "setup",
+                    "--mode",
+                    "focus",
+                    "--privacy",
+                    "restricted",
+                ),
+            )
+            (source_home / "controls.json").unlink()
+            relative_paths = (
+                "state.json",
+                "profile.json",
+                "projects/index.json",
+                "ledger/events.jsonl",
+            )
+            entries = []
+            payloads = {}
+            for relative in relative_paths:
+                payload = (source_home / Path(relative)).read_bytes()
+                payloads[relative] = payload
+                entries.append(
+                    {
+                        "path": relative,
+                        "size": len(payload),
+                        "sha256": hashlib.sha256(payload).hexdigest(),
+                    }
+                )
+            manifest = {
+                "application": APP_NAME,
+                "archive_schema_version": 1,
+                "created_at": "2026-08-07T00:00:00Z",
+                "includes_raw_sources": False,
+                "entries": entries,
+            }
+            with zipfile.ZipFile(archive_path, "w") as archive:
+                archive.writestr("manifest.json", json.dumps(manifest))
+                for relative, payload in payloads.items():
+                    archive.writestr(relative, payload)
+
+            imported = assert_ok(
+                self, run_cli(target_home, "import", str(archive_path))
+            )
+            self.assertTrue(imported["imported"])
+            self.assertTrue((target_home / "controls.json").is_file())
+            status = assert_ok(self, run_cli(target_home, "status"))
+            self.assertEqual(status["default_mode"], "focus")
+            self.assertEqual(status["activation_scope"], "explicit")
+            self.assertEqual(status["privacy"], "restricted")
 
     def test_include_sources_export_restores_searchable_raw_evidence(self) -> None:
         with tempfile.TemporaryDirectory(prefix="experience-loop-archive-raw-") as raw:
@@ -395,6 +455,58 @@ class ArchiveIntegrationTests(unittest.TestCase):
             imported = run_cli(target_home, "import", str(archive_path))
             self.assertEqual(imported.returncode, 6)
             self.assertFalse(target_home.exists())
+
+    def test_import_rejects_boolean_and_float_archive_schema_versions(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="experience-loop-archive-version-type-") as raw:
+            root = Path(raw)
+            for index, version in enumerate((True, 1.0), start=1):
+                with self.subTest(version=version):
+                    archive_path = root / ("bad-version-%s.zip" % index)
+                    target_home = root / ("target-%s" % index)
+                    manifest = {
+                        "application": APP_NAME,
+                        "archive_schema_version": version,
+                        "created_at": "2026-08-07T00:00:00Z",
+                        "includes_raw_sources": False,
+                        "entries": [],
+                    }
+                    with zipfile.ZipFile(archive_path, "w") as archive:
+                        archive.writestr("manifest.json", json.dumps(manifest))
+
+                    imported = run_cli(target_home, "import", str(archive_path))
+                    self.assertEqual(imported.returncode, 6)
+                    self.assertIn("不支持的归档版本", payload(imported)["error"]["message"])
+                    self.assertFalse(target_home.exists())
+
+    def test_import_rejects_boolean_and_float_entry_sizes(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="experience-loop-archive-size-type-") as raw:
+            root = Path(raw)
+            content = b"x"
+            for index, size in enumerate((True, 1.0), start=1):
+                with self.subTest(size=size):
+                    archive_path = root / ("bad-size-%s.zip" % index)
+                    target_home = root / ("target-%s" % index)
+                    manifest = {
+                        "application": APP_NAME,
+                        "archive_schema_version": 1,
+                        "created_at": "2026-08-07T00:00:00Z",
+                        "includes_raw_sources": False,
+                        "entries": [
+                            {
+                                "path": "state.json",
+                                "size": size,
+                                "sha256": hashlib.sha256(content).hexdigest(),
+                            }
+                        ],
+                    }
+                    with zipfile.ZipFile(archive_path, "w") as archive:
+                        archive.writestr("manifest.json", json.dumps(manifest))
+                        archive.writestr("state.json", content)
+
+                    imported = run_cli(target_home, "import", str(archive_path))
+                    self.assertEqual(imported.returncode, 6)
+                    self.assertIn("归档条目元数据无效", payload(imported)["error"]["message"])
+                    self.assertFalse(target_home.exists())
 
     def test_import_rejects_archive_stored_inside_replaced_home(self) -> None:
         with tempfile.TemporaryDirectory(prefix="experience-loop-inner-archive-") as raw:

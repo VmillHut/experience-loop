@@ -13,6 +13,7 @@ from typing import Any, Dict, List, Optional, Sequence, Tuple
 
 from .archive import export_archive, import_archive
 from .common import (
+    ACTIVATION_SCOPES,
     CAPABILITIES,
     EXIT_IO,
     EXIT_OK,
@@ -27,14 +28,15 @@ from .common import (
     ExperienceLoopError,
     normalize_mode,
 )
+from .controls import PRIVACY_LEVELS, load_controls, set_controls
+from .identity import identity_probe
 from .ledger import INDEPENDENCE_LEVELS, KINDS, load_events, record_event, review_events
 from .profile import (
-    PRIVACY_LEVELS,
     configure_profile,
-    default_profile,
+    inspect_profile_control_mirrors,
     load_profile,
-    load_profile_controls,
     profile_for_display,
+    repair_profile_control_mirrors,
     set_mode,
     validate_profile,
 )
@@ -92,6 +94,91 @@ def _mode_value(value: str) -> str:
         raise argparse.ArgumentTypeError(exc.message) from exc
 
 
+def _same_path(left: Path, right: Path) -> bool:
+    return os.path.normcase(os.path.normpath(str(left))) == os.path.normcase(
+        os.path.normpath(str(right))
+    )
+
+
+def _running_from_source_checkout() -> bool:
+    """Return whether this runtime is inside the development repository tree."""
+
+    root = Path(__file__).resolve().parents[2]
+    return (
+        (root / "tests").is_dir()
+        and (root / "packaging").is_dir()
+        and (root / "CONTRIBUTING.md").is_file()
+    )
+
+
+def _require_source_setup_opt_in(store: Store) -> None:
+    """Refuse first setup from source unless the developer explicitly opts in."""
+
+    if store.is_initialized() or not _running_from_source_checkout():
+        return
+    if os.environ.get("EXPERIENCE_LOOP_DEVELOPER_SOURCE") == "1":
+        return
+    raise ExperienceLoopError(
+        "检测到正在从仓库源码运行；仓库文件不是宿主激活。首次 setup 默认拒绝。",
+        EXIT_OPERATION_FAILED,
+        {
+            "host_activation": "not_evaluated",
+            "developer_override": "EXPERIENCE_LOOP_DEVELOPER_SOURCE=1",
+            "override_scope": "local runtime development only; not host activation",
+        },
+    )
+
+
+def _automatic_routing_adapter_requirement(
+    store: Store, activation_scope: str
+) -> Optional[Dict[str, Any]]:
+    """Describe unresolved host work for a saved automatic-routing preference."""
+
+    if activation_scope == "explicit":
+        return None
+    result: Dict[str, Any] = {
+        "status": "pending_new_session_verification",
+        "preference_saved": True,
+        "host_activation": "not_evaluated",
+        "hook_observed": "unknown",
+        "message": (
+            "自动路由偏好已保存；宿主适配能力和 Hook 执行仍需在新建、"
+            "恢复或刷新后的任务中验证。"
+        ),
+    }
+    default_home = (Path.home() / ".experience-loop").resolve()
+    if _same_path(store.home, default_home):
+        return result
+    configured = os.environ.get("EXPERIENCE_LOOP_HOME")
+    if configured:
+        try:
+            configured_home = Path(configured).expanduser().resolve()
+        except OSError:
+            configured_home = None
+        if configured_home is not None and _same_path(store.home, configured_home):
+            return result
+    result.update(
+        {
+            "status": "configuration_required",
+            "warning": {
+                "code": "automatic_routing_custom_home_not_persistent",
+                "message": (
+                    "自动路由的新会话无法从一次性 --home 发现控制状态；"
+                    "显式调用不受影响。"
+                ),
+            },
+            "requirement": {
+                "kind": "persist_environment_variable",
+                "name": "EXPERIENCE_LOOP_HOME",
+                "must_match_runtime_home": True,
+                "applies_to": ["project", "global"],
+            },
+            "explicit_invocation_affected": False,
+        }
+    )
+    return result
+
+
 def _parser() -> argparse.ArgumentParser:
     parser = RuntimeArgumentParser(
         prog="experience-loop",
@@ -124,6 +211,12 @@ def _parser() -> argparse.ArgumentParser:
         "--mode", type=_mode_value, metavar="{auto,focus,deep,off}", default=None
     )
     setup.add_argument("--privacy", choices=PRIVACY_LEVELS, default=None)
+    setup.add_argument(
+        "--activation-scope",
+        choices=ACTIVATION_SCOPES,
+        default=None,
+        help="自动激活范围；默认 explicit，仅在显式调用时启用",
+    )
     setup.add_argument("--project", help="初始化后立即只读扫描的主项目目录")
     setup.add_argument(
         "--confirm-content-access",
@@ -173,6 +266,22 @@ def _parser() -> argparse.ArgumentParser:
     mode = commands.add_parser("mode", help="查看或切换工作模式")
     mode.add_argument(
         "value", nargs="?", type=_mode_value, metavar="{auto,focus,deep,off}"
+    )
+
+    control = commands.add_parser("control", help="查看或更新默认模式、激活范围与隐私边界")
+    control_commands = control.add_subparsers(dest="control_command", required=True)
+    control_commands.add_parser("show", help="轻量查看持久控制状态")
+    control_set = control_commands.add_parser("set", help="原子更新一个或多个控制字段")
+    control_set.add_argument(
+        "--default-mode", type=_mode_value, metavar="{auto,focus,deep,off}"
+    )
+    control_set.add_argument("--activation-scope", choices=ACTIVATION_SCOPES)
+    control_set.add_argument("--privacy", choices=PRIVACY_LEVELS)
+
+    identity = commands.add_parser("identity", help="只读校验当前运行的精确 Skill 副本")
+    identity.add_argument(
+        "--expected-fingerprint",
+        help="安装回执给出的 sha256 指纹；不匹配时禁止首次 onboarding",
     )
 
     project = commands.add_parser("project", help="管理项目画像")
@@ -236,6 +345,12 @@ def _parser() -> argparse.ArgumentParser:
         help="0.0–1.0 的浮点数，用于表达这条判断的置信度",
     )
     record.add_argument("--tag", action="append", default=[])
+    record.add_argument(
+        "--resolved-mode",
+        type=_mode_value,
+        metavar="{auto,focus,deep,off}",
+        help="本任务实际解析出的模式；省略时使用持久默认模式",
+    )
     review = ledger_commands.add_parser("review", help="回顾经验记录和证据型 XP")
     review.add_argument("--project")
     review.add_argument("--limit", type=int, default=20)
@@ -350,6 +465,7 @@ def _status(store: Store) -> Dict[str, Any]:
         }
     state = store.require_initialized()
     profile = load_profile(store)
+    controls = load_controls(store)
     projects = list_projects(store)
     events = load_events(store)
     knowledge_sources = None  # type: Optional[int]
@@ -406,9 +522,13 @@ def _status(store: Store) -> Dict[str, Any]:
         "initialized": True,
         "home": str(store.home),
         "schema_version": state["schema_version"],
-        "mode": profile["mode"],
+        "mode": controls["default_mode"],
+        "default_mode": controls["default_mode"],
+        "activation_scope": controls["activation_scope"],
         "profile_customized": profile.get("customized", False),
-        "privacy": profile.get("privacy", "normal"),
+        "privacy": controls["privacy"],
+        "controls_revision": controls["revision"],
+        "controls_source": controls["source"],
         "projects": projects["count"],
         "ledger_events": len(events),
         "knowledge_status": knowledge_status,
@@ -468,23 +588,77 @@ def _doctor(store: Store, repair: bool, deep: bool = False) -> Dict[str, Any]:
 
     if repair:
         before = {
+            "controls": store.controls_path.exists(),
             "profile": store.profile_path.exists(),
             "projects_index": store.projects_index_path.exists(),
             "ledger": store.ledger_path.exists(),
         }
         store.initialize()
-        if not store.profile_path.exists():
+        if not store.profile_path.exists() or not store.controls_path.exists():
             configure_profile(store)
         for key, existed in before.items():
             if not existed:
                 repaired.append(key)
         store.harden_known_permissions(deep=True)
 
+    controls = None
+    try:
+        controls = load_controls(store)
+        checks.append(
+            _check(
+                "controls",
+                "pass",
+                "默认模式、激活范围与隐私控制有效。",
+                default_mode=controls["default_mode"],
+                activation_scope=controls["activation_scope"],
+                revision=controls["revision"],
+                source=controls["source"],
+            )
+        )
+    except ExperienceLoopError as exc:
+        checks.append(_check("controls", "fail", exc.message))
+    profile_valid = False
     try:
         validate_profile(load_profile(store))
+        profile_valid = True
         checks.append(_check("profile", "pass", "个人画像有效。"))
     except ExperienceLoopError as exc:
         checks.append(_check("profile", "fail", exc.message))
+    if controls is not None and profile_valid:
+        try:
+            mirror_status = inspect_profile_control_mirrors(
+                store, controls=controls
+            )
+            if mirror_status["consistent"]:
+                checks.append(
+                    _check(
+                        "profile-control-mirrors",
+                        "pass",
+                        "个人画像中的模式、隐私与 customized 兼容镜像和 controls.json 一致。",
+                    )
+                )
+            elif repair:
+                repair_result = repair_profile_control_mirrors(store)
+                repaired.append("profile_control_mirrors")
+                checks.append(
+                    _check(
+                        "profile-control-mirrors",
+                        "pass",
+                        "已从 controls.json 同步个人画像兼容镜像，未更改画像内容。",
+                        repaired_fields=repair_result["fields"],
+                    )
+                )
+            else:
+                checks.append(
+                    _check(
+                        "profile-control-mirrors",
+                        "fail",
+                        "个人画像兼容镜像与 controls.json 权威值不一致；运行 doctor --repair 同步。",
+                        mismatches=mirror_status["mismatches"],
+                    )
+                )
+        except ExperienceLoopError as exc:
+            checks.append(_check("profile-control-mirrors", "fail", exc.message))
     try:
         store.load_projects_index()
         checks.append(_check("projects", "pass", "项目索引有效。"))
@@ -658,6 +832,7 @@ def _call_knowledge(function: Any, *args: Any, **kwargs: Any) -> Any:
 def _dispatch(namespace: argparse.Namespace, store: Store) -> Dict[str, Any]:
     command = namespace.command
     if command == "setup":
+        _require_source_setup_opt_in(store)
         already_initialized = store.is_initialized()
         profile = configure_profile(
             store,
@@ -673,22 +848,37 @@ def _dispatch(namespace: argparse.Namespace, store: Store) -> Dict[str, Any]:
             guidance_preference=namespace.guidance_preference,
             delivery_context=namespace.delivery_context,
             mode=namespace.mode,
+            activation_scope=namespace.activation_scope,
             privacy=namespace.privacy,
         )
+        controls = load_controls(store)
         result = {
             "initialized": True,
             "already_initialized": already_initialized,
             "home": str(store.home),
             "profile": profile,
+            "controls": controls,
+            "host_activation": "not_evaluated",
             "next_actions": (
                 [] if already_initialized else ["offer_short_tutorial"]
             ),
             "message": (
-                "Experience Loop 已更新；保留现有初始化状态，不重复新手教学。"
+                "Experience Loop 本地状态已更新；保留现有初始化状态，不重复新手教学。"
                 if already_initialized
-                else "Experience Loop 已可用；画像字段均可选，下一步只需询问是否需要简短教学。"
+                else "Experience Loop 本地状态已初始化；这不证明宿主已激活 Skill。"
             ),
         }
+        adapter = _automatic_routing_adapter_requirement(
+            store, controls["activation_scope"]
+        )
+        if adapter is not None:
+            result["adapter"] = adapter
+            result["message"] += " " + adapter["message"]
+            if adapter["status"] == "configuration_required":
+                result["message"] += (
+                    " 还需为后续宿主会话持久设置 EXPERIENCE_LOOP_HOME；"
+                    "显式调用不受影响。"
+                )
         if namespace.project:
             result["project"] = scan_project(
                 store,
@@ -736,25 +926,94 @@ def _dispatch(namespace: argparse.Namespace, store: Store) -> Dict[str, Any]:
         return {"updated": True, "profile": profile}
     if command == "doctor":
         return _doctor(store, namespace.repair, namespace.deep)
-    if command == "mode":
-        if namespace.value is None and not store.is_initialized():
-            profile = default_profile()
-            persisted = False
-        elif namespace.value is not None:
-            profile = set_mode(store, namespace.value)
-            persisted = True
+    if command == "control":
+        if namespace.control_command == "show":
+            controls = load_controls(store, allow_uninitialized=True)
         else:
+            if (
+                namespace.default_mode is None
+                and namespace.activation_scope is None
+                and namespace.privacy is None
+            ):
+                raise ExperienceLoopError(
+                    "control set 至少需要 --default-mode、--activation-scope 或 --privacy 之一。"
+                )
             store.require_initialized()
-            profile = load_profile_controls(store)
-            persisted = True
+            controls = set_controls(
+                store,
+                default_mode=namespace.default_mode,
+                activation_scope=namespace.activation_scope,
+                privacy=namespace.privacy,
+            )
+        result = {
+            **controls,
+            "mode": controls["default_mode"],
+            "records_learning_events": controls["default_mode"] != "off",
+            "preference_saved": bool(controls["persisted"]),
+            "host_activation": "not_evaluated",
+            "message": "默认模式偏好：%s；激活范围偏好：%s"
+            % (controls["default_mode"], controls["activation_scope"]),
+        }
+        adapter = _automatic_routing_adapter_requirement(
+            store, controls["activation_scope"]
+        )
+        if adapter is not None:
+            result["adapter"] = adapter
+            result["message"] += "；" + adapter["message"]
+            if adapter["status"] == "configuration_required":
+                result["message"] += (
+                    " 还需为后续宿主会话持久设置 EXPERIENCE_LOOP_HOME；"
+                    "显式调用不受影响"
+                )
+        return result
+    if command == "identity":
+        result = identity_probe(namespace.expected_fingerprint)
+        try:
+            controls = load_controls(store, allow_uninitialized=True)
+        except DataCorruptionError as exc:
+            result["runtime"] = {
+                "initialized": store.is_initialized(),
+                "controls_status": "unavailable",
+                "controls_error": exc.message,
+            }
+        else:
+            result["runtime"] = {
+                "initialized": store.is_initialized(),
+                "controls_status": "available",
+                "default_mode": controls["default_mode"],
+                "activation_scope": controls["activation_scope"],
+                "profile_customized": controls["profile_customized"],
+                "controls_source": controls["source"],
+            }
+        return result
+    if command == "mode":
+        if namespace.value is not None:
+            store.require_initialized()
+            profile = set_mode(store, namespace.value)
+        else:
+            controls = load_controls(store, allow_uninitialized=True)
+            profile = {
+                "mode": controls["default_mode"],
+                "default_mode": controls["default_mode"],
+                "activation_scope": controls["activation_scope"],
+                "privacy": controls["privacy"],
+                "customized": controls["profile_customized"],
+                "revision": controls["revision"],
+                "persisted": controls["persisted"],
+                "source": controls["source"],
+            }
         return {
             "mode": profile["mode"],
+            "default_mode": profile.get("default_mode", profile["mode"]),
+            "activation_scope": profile.get("activation_scope", "explicit"),
             "records_learning_events": profile["mode"] != "off",
             "profile_customized": bool(profile.get("customized")),
             "privacy": profile.get("privacy", "normal"),
-            "persisted": persisted,
+            "revision": profile.get("revision", 0),
+            "source": profile.get("source", "controls"),
+            "persisted": bool(profile.get("persisted", True)),
             "home": str(store.home),
-            "message": "当前模式：%s" % profile["mode"],
+            "message": "默认模式：%s" % profile["mode"],
         }
     if command == "project":
         if namespace.project_command == "scan":
@@ -835,13 +1094,14 @@ def _dispatch(namespace: argparse.Namespace, store: Store) -> Dict[str, Any]:
                 tags=namespace.tag,
                 prior_event_id=namespace.prior_event,
                 context_difference=namespace.context_difference,
+                resolved_mode=namespace.resolved_mode,
             )
         return review_events(store, project_id=namespace.project, limit=namespace.limit, since_days=namespace.since_days)
     if command == "knowledge":
         store.require_initialized()
         api = _knowledge_api()
         data_dir = str(store.home)
-        privacy = load_profile(store).get("privacy", "normal")
+        privacy = load_controls(store)["privacy"]
         if namespace.knowledge_command == "add":
             if privacy == "metadata-only":
                 raise ExperienceLoopError(

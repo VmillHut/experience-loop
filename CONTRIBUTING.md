@@ -4,6 +4,12 @@ Thank you for helping make Experience Loop useful in real software delivery.
 
 ## Before opening a change
 
+Before changing product behavior, Skill instructions, host adapters, packaging,
+installation, onboarding, persistence, privacy, or evaluations, read the
+[development compass](docs/DEVELOPMENT_COMPASS.md) completely once for the
+current task. It defines the mission, boundaries, and evidence obligations while
+leaving implementation methods open to the strongest current Agent and host.
+
 Open an issue or discussion before a large redesign. Describe the developer workflow it improves, the delivery overhead it adds, and the evidence that would show the improvement is real.
 
 Keep version one programmer-first. Generic learning features are welcome only when they preserve or improve software-engineering behavior.
@@ -24,6 +30,22 @@ python scripts/experience_loop.py --home .tmp-experience-loop doctor
 ```
 
 Delete the temporary directory after testing. Do not commit generated profiles, ledgers, indexes, books, or private project data.
+
+### Local OpenAI Plugin iteration
+
+Build the development Plugin through a local Marketplace so Codex owns
+registration, upgrades, cache, and removal:
+
+```bash
+python -B scripts/build_plugin.py --marketplace-root dist/openai-marketplace --json
+```
+
+The builder gives the Plugin a SemVer cachebuster and returns, but does not run,
+the exact `codex plugin marketplace add`, `codex plugin add`, and
+`codex plugin list --json` argument vectors. Execute the applicable actions,
+review the current Hook definition in the host trust UI, and start a fresh task
+before checking Skill availability or current-turn selection. Never copy a
+bundle into, or delete files from, the Codex Plugin cache directly.
 
 ## Design requirements
 
@@ -58,6 +80,8 @@ For Knowledge Lens changes, include tests for malformed and adversarial inputs, 
 
 - Keep `SKILL.md` concise and imperative; move detailed behavior into `references/`.
 - Keep all reference files directly discoverable from `SKILL.md`.
+- Keep `docs/DEVELOPMENT_COMPASS.md` and root `AGENTS.md` source-only; never add
+  them to the standalone Skill or Plugin runtime payload.
 - Describe current behavior honestly; label planned work as planned.
 - Update `CHANGELOG.md` for user-visible changes.
 - Keep Chinese and English README claims aligned.

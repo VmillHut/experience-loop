@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import importlib
 import json
 import os
 from pathlib import Path, PurePosixPath
@@ -23,23 +24,65 @@ from datetime import datetime, timezone
 from typing import Any, Optional
 from uuid import uuid4
 
-
 SKILL_NAME = "experience-loop"
-INSTALLER_VERSION = 5
-RUNTIME_ENTRIES = (
+INSTALLER_VERSION = 6
+HOST_FACTS_SCHEMA = "experience-loop.host-facts/v1"
+LEGACY_ACTIVATION_RECEIPT_SCHEMA = "experience-loop.activation/v1"
+LEGACY_ACTIVATION_RECEIPT_STATUS = "deprecated-advisory"
+PORTABLE_SKILL_PAYLOAD_FILES = (
     "SKILL.md",
     "LICENSE",
     "VERSION",
-    "agents",
-    "assets",
-    "references",
-    "scripts",
-    "vendor",
-    "licenses",
     "THIRD_PARTY_NOTICES.md",
+    "agents/openai.yaml",
+    "assets/icon-large.svg",
+    "assets/icon-small.svg",
+    "references/capability-compass.md",
+    "references/experience-model.md",
+    "references/host-compatibility.md",
+    "references/knowledge-lens.md",
+    "references/onboarding.md",
+    "references/safety-and-privacy.md",
+    "references/setup-and-profiles.md",
+    "references/workflow.md",
+    "scripts/experience_loop.py",
+    "scripts/global_router.py",
+    "scripts/install.py",
+    "scripts/uninstall.py",
+    "scripts/experience_loop_lib/__init__.py",
+    "scripts/experience_loop_lib/archive.py",
+    "scripts/experience_loop_lib/cli.py",
+    "scripts/experience_loop_lib/common.py",
+    "scripts/experience_loop_lib/controls.py",
+    "scripts/experience_loop_lib/extractors.py",
+    "scripts/experience_loop_lib/identity.py",
+    "scripts/experience_loop_lib/knowledge.py",
+    "scripts/experience_loop_lib/ledger.py",
+    "scripts/experience_loop_lib/path_policy.py",
+    "scripts/experience_loop_lib/profile.py",
+    "scripts/experience_loop_lib/project.py",
+    "scripts/experience_loop_lib/storage.py",
+    "vendor/manifest.json",
+    "vendor/wheels/pypdf-6.14.2-py3-none-any.whl",
+    "vendor/wheels/typing_extensions-4.16.0-py3-none-any.whl",
+    "licenses/pypdf-LICENSE",
+    "licenses/typing_extensions-LICENSE",
+)
+SOURCE_ONLY_CONTAMINATION = (
+    "AGENTS.md",
+    "CHANGELOG.md",
+    "CONTRIBUTING.md",
+    "README.md",
+    "README.en.md",
+    "docs",
+    "evals",
+    "tests",
+    "packaging",
+    "scripts/build_plugin.py",
+    "scripts/verify_release.py",
 )
 MARKER_NAME = ".experience-loop-install.json"
-CURRENT_RUNTIME_CONTRACT = 2
+CURRENT_RUNTIME_CONTRACT = 3
 COMPATIBLE_INSTALL_FILES = (
     "SKILL.md",
     "VERSION",
@@ -71,11 +114,17 @@ COMPATIBLE_INSTALL_FILES = (
 RUNTIME_CONTRACT_1_FILES = COMPATIBLE_INSTALL_FILES + (
     "references/onboarding.md",
 )
-CURRENT_SOURCE_REQUIRED_FILES = RUNTIME_CONTRACT_1_FILES + (
+RUNTIME_CONTRACT_2_FILES = RUNTIME_CONTRACT_1_FILES + (
     "references/host-compatibility.md",
+)
+CURRENT_SOURCE_REQUIRED_FILES = RUNTIME_CONTRACT_2_FILES + (
+    "scripts/global_router.py",
+    "scripts/experience_loop_lib/controls.py",
+    "scripts/experience_loop_lib/identity.py",
 )
 RUNTIME_CONTRACT_FILES = {
     1: RUNTIME_CONTRACT_1_FILES,
+    2: RUNTIME_CONTRACT_2_FILES,
     CURRENT_RUNTIME_CONTRACT: CURRENT_SOURCE_REQUIRED_FILES,
 }
 BACKUP_DIRECTORY_NAME = "skill-backups"
@@ -164,12 +213,19 @@ def build_host_contract(args: argparse.Namespace, target: Path) -> dict[str, obj
 
 def host_receipt(contract: dict[str, object]) -> dict[str, object]:
     reload_hint = contract.get("reload_hint")
+    has_report = bool(contract.get("host_evidence"))
     return {
         **contract,
         "host_contract_status": (
-            "resolved-by-installing-agent"
-            if contract.get("host_evidence")
-            else "missing-host-evidence"
+            "reported-by-installing-agent"
+            if has_report
+            else "missing-installing-agent-report"
+        ),
+        "host_evidence_status": "reported-unverified" if has_report else "missing",
+        "host_evidence_note": (
+            "Installing-Agent text is advisory context only. It is not Plugin "
+            "registration, Skill availability, current-turn attachment provenance, "
+            "or Hook observation."
         ),
         "support_level": "dynamic-host-contract-requires-session-validation",
         "reload_hint": reload_hint
@@ -180,10 +236,10 @@ def host_receipt(contract: dict[str, object]) -> dict[str, object]:
             "is reported separately and is never executed by the installer."
         ),
         "discovery_status": "requires-host-session-validation",
-        "discovery_roots_coverage": "asserted-by-installing-agent",
+        "discovery_roots_coverage": "reported-by-installing-agent",
         "discovery_roots_note": (
             "Duplicate protection covers only the discovery roots declared by the "
-            "installation AI in this receipt."
+            "installation AI in this receipt; the report is not host-discovery proof."
         ),
         "global_router": "not-authorized-by-installation",
         "core_behavior_contract": "unchanged-across-hosts",
@@ -207,7 +263,7 @@ def parse_args() -> argparse.Namespace:
         "--host",
         default=None,
         help=(
-            "Informational current-host label resolved by the installation AI. "
+            "Informational current-host label reported by the installation AI. "
             "It does not select a hard-coded adapter."
         ),
     )
@@ -215,7 +271,10 @@ def parse_args() -> argparse.Namespace:
         "--target",
         type=Path,
         required=True,
-        help="Current host Skill directory resolved and verified by the installation AI.",
+        help=(
+            "Current host Skill directory reported by the installation AI and "
+            "validated only as an installation filesystem target by this script."
+        ),
     )
     parser.add_argument(
         "--transaction-root",
@@ -241,7 +300,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--scope", choices=HOST_SCOPES, default=None)
     parser.add_argument(
         "--invocation",
-        help="Current host invocation syntax or interaction, for the handoff receipt.",
+        help=(
+            "Invocation selector reported by the installation AI; recorded verbatim "
+            "and never executed. It remains advisory until the current host supplies "
+            "attachment provenance in a fresh turn."
+        ),
     )
     parser.add_argument(
         "--reload-hint",
@@ -249,7 +312,10 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--host-evidence",
-        help="Short evidence explaining how the AI resolved the current host contract.",
+        help=(
+            "Short Installing-Agent report about the host contract. The installer "
+            "stores it as unverified advisory context, never as host evidence."
+        ),
     )
     parser.add_argument(
         "--discovery-root",
@@ -292,15 +358,371 @@ def read_version(root: Path) -> str:
     return (root / "VERSION").read_text(encoding="utf-8").strip()
 
 
-def onboarding_prompt(target: Path) -> str:
+def expected_skill_identity(
+    target: Path, content_root: Path, version: str
+) -> dict[str, object]:
+    identity_module_path = (
+        content_root.resolve()
+        / "scripts"
+        / "experience_loop_lib"
+        / "identity.py"
+    )
+    if not identity_module_path.is_file():
+        marker = read_marker(content_root)
+        declared_contract = marker.get("runtime_contract") if marker else None
+        controls_module = (
+            content_root.resolve()
+            / "scripts"
+            / "experience_loop_lib"
+            / "controls.py"
+        )
+        if controls_module.exists() or (
+            type(declared_contract) is int
+            and declared_contract >= CURRENT_RUNTIME_CONTRACT
+        ):
+            raise RuntimeError(
+                "Current runtime contract is missing its v2 identity module; "
+                "refusing to downgrade the activation proof."
+            )
+        # Compatibility for rollback to pre-identity runtime contracts. Current
+        # installs must use the shared v2 implementation below; this narrower
+        # proof is never selected merely because a current manifest is damaged.
+        skill_payload = (content_root / "SKILL.md").read_bytes()
+        runtime_payload = (
+            content_root / "scripts" / "experience_loop.py"
+        ).read_bytes()
+        fingerprint_input = {
+            "name": SKILL_NAME,
+            "root": os.path.normcase(str(target.resolve())),
+            "version": version,
+            "skill_sha256": hashlib.sha256(skill_payload).hexdigest(),
+            "runtime_sha256": hashlib.sha256(runtime_payload).hexdigest(),
+        }
+        canonical = json.dumps(
+            fingerprint_input,
+            ensure_ascii=False,
+            sort_keys=True,
+            separators=(",", ":"),
+        ).encode("utf-8")
+        return {
+            **fingerprint_input,
+            "skill_manifest": str((target / "SKILL.md").resolve()),
+            "runtime": str((target / "scripts" / "experience_loop.py").resolve()),
+            "fingerprint_algorithm": "sha256:experience-loop-identity-v1",
+            "fingerprint": "sha256:" + hashlib.sha256(canonical).hexdigest(),
+            "compatibility_scope": "legacy-pre-v2-runtime-contract",
+        }
+
+    scripts_directory = str(content_root.resolve() / "scripts")
+    added_path = scripts_directory not in sys.path
+    if added_path:
+        sys.path.insert(0, scripts_directory)
+    try:
+        identity_module = importlib.import_module("experience_loop_lib.identity")
+        return identity_module.build_installed_identity(target, content_root, version)
+    finally:
+        if added_path:
+            sys.path.remove(scripts_directory)
+
+
+def onboarding_prompt(
+    target: Path,
+    host_contract: dict[str, object],
+    identity: dict[str, object],
+) -> str:
     reference = (target / "references" / "onboarding.md").resolve()
+    invocation = host_contract.get("invocation")
+    if isinstance(invocation, str) and invocation:
+        activation = (
+            f'请在新一条消息中使用当前宿主的显式调用方式 "{invocation}" 激活 '
+            f'Experience Loop，并先核对安装回执中的身份指纹 "{identity["fingerprint"]}"。'
+        )
+    else:
+        activation = (
+            "当前宿主的显式调用方式尚未解析；请先通过宿主真实的 Skill 列表或"
+            "选择器解析并显式激活 Experience Loop。"
+        )
     return (
-        "Experience Loop 完整核心已安装，且应先由当前宿主确认发现。请检查是否"
-        "已经初始化；若尚未初始化，读取 "
-        f'"{reference}" 并开始对话式初始化。所有画像问题都可跳过，最后询问我'
-        "是否需要约 2 分钟的使用教学；若已经初始化，请保留现有画像且不要重复"
+        "Experience Loop 完整核心已安装，但安装轮不能证明 Skill 已进入当前模型"
+        f"上下文。{activation}只有宿主在当前轮提供 attachment provenance，且"
+        "独立身份比对匹配后，才检查是否已经"
+        "初始化；若尚未初始化，读取 "
+        f'"{reference}" 并开始对话式初始化。所有画像问题都可跳过，最后只询问我'
+        "是否需要不超过 60 秒的控制微型教学；若已经初始化，请保留现有画像且不要重复"
         "新手教学，除非我明确要求。"
     )
+
+
+def independent_lifecycle_facts(
+    identity: dict[str, object],
+    *,
+    identity_status: str,
+    identity_evidence: str,
+    host_status: str,
+) -> dict[str, object]:
+    """Report five independent facts without converting model text into host proof."""
+
+    return {
+        "identity": {
+            "status": identity_status,
+            "evidence": identity_evidence,
+            "fingerprint": identity["fingerprint"],
+            "fingerprint_algorithm": identity["fingerprint_algorithm"],
+        },
+        "plugin_registration": {
+            "status": host_status,
+            "evidence": "requires-host-plugin-manager-provenance",
+        },
+        "skill_availability": {
+            "status": host_status,
+            "evidence": "requires-current-host-skill-registry-provenance",
+        },
+        "current_turn_activation": {
+            "status": host_status,
+            "evidence": "requires-current-turn-host-attachment-provenance",
+            "identity_substitution": "forbidden",
+        },
+        "hook_observed": {
+            "status": host_status,
+            "evidence": "requires-host-injected-hook-marker",
+        },
+    }
+
+
+def completed_install_protocol(
+    target: Path,
+    content_root: Path,
+    version: str,
+    host_contract: dict[str, object],
+    filesystem_status: str,
+    runtime_validation_status: str,
+) -> dict[str, object]:
+    target = target.resolve()
+    identity = expected_skill_identity(target, content_root, version)
+    invocation = host_contract.get("invocation")
+    has_invocation = isinstance(invocation, str) and bool(invocation)
+    if has_invocation:
+        handoff_state = "awaiting-explicit-invocation"
+        prompt = (
+            f"通过宿主真实选择 UI 使用 {invocation}；只有当前轮 attachment "
+            "provenance 被宿主观察到后，才从宿主附加的副本核对安装身份指纹 "
+            f"{identity['fingerprint']}。不要生成激活回执来替代宿主证据。"
+        )
+        next_action = {
+            "kind": "explicit-skill-invocation",
+            "message": (
+                "在新一条消息中通过宿主真实选择 UI 附加 Experience Loop；"
+                "观察 attachment provenance 后再独立核对身份。"
+            ),
+            "invocation": invocation,
+            "prompt": prompt,
+            "required_observations": [
+                "facts.current_turn_activation.status=observed",
+                "facts.identity.status=verified",
+            ],
+            "expected_receipt": LEGACY_ACTIVATION_RECEIPT_SCHEMA,
+            "expected_receipt_status": LEGACY_ACTIVATION_RECEIPT_STATUS,
+            "expected_receipt_note": (
+                "Compatibility metadata only; a model-authored receipt never proves "
+                "or validates current-turn activation."
+            ),
+        }
+    else:
+        handoff_state = "awaiting-invocation-resolution"
+        prompt = None
+        next_action = {
+            "kind": "resolve-explicit-invocation",
+            "message": (
+                "先从当前宿主真实的 Skill 列表、选择器或帮助中解析显式调用方式；"
+                "不要在未激活 Skill 的安装轮开始初始化。"
+            ),
+            "required_observations": [
+                "facts.current_turn_activation.status=observed",
+                "facts.identity.status=verified",
+            ],
+            "expected_receipt": LEGACY_ACTIVATION_RECEIPT_SCHEMA,
+            "expected_receipt_status": LEGACY_ACTIVATION_RECEIPT_STATUS,
+            "expected_receipt_note": (
+                "Compatibility metadata only; a model-authored receipt never proves "
+                "or validates current-turn activation."
+            ),
+        }
+    if identity["fingerprint_algorithm"] == "sha256:experience-loop-identity-v2":
+        identity_proof_scope = (
+            "The v2 identity fingerprint binds the expected root, version, and "
+            "versioned runtime-contract manifest digest. Plugin manifests and "
+            "Hooks remain separately validated distribution layers. "
+        )
+    else:
+        identity_proof_scope = (
+            "This rollback restored a pre-v2 runtime contract, so its legacy "
+            "identity binds only the expected root, Skill manifest, runtime entry, "
+            "and version. Reinstall or upgrade to obtain full manifest identity. "
+        )
+    return {
+        "receipt_schema": "experience-loop.install/v2",
+        "facts_schema": HOST_FACTS_SCHEMA,
+        "facts": independent_lifecycle_facts(
+            identity,
+            identity_status="verified",
+            identity_evidence="deterministic-installed-copy-comparison",
+            host_status="not-observed",
+        ),
+        "acceptance": {
+            "host_lifecycle_fields_status": LEGACY_ACTIVATION_RECEIPT_STATUS,
+            "host_lifecycle_fields_note": (
+                "Use top-level facts for host lifecycle. The legacy host_discovery "
+                "and current_turn_activation fields are advisory only."
+            ),
+            "filesystem": {
+                "status": "verified",
+                "evidence": filesystem_status,
+            },
+            "runtime": {
+                "status": "pending",
+                "evidence": runtime_validation_status,
+            },
+            "host_discovery": {
+                "status": "pending",
+                "evidence": "requires-host-session-validation",
+                "status_semantics": LEGACY_ACTIVATION_RECEIPT_STATUS,
+                "replacement": "facts.skill_availability",
+            },
+            "current_turn_activation": {
+                "status": "pending",
+                "evidence": "requires-current-turn-host-attachment-provenance",
+                "status_semantics": LEGACY_ACTIVATION_RECEIPT_STATUS,
+                "replacement": "facts.current_turn_activation",
+            },
+        },
+        "activation_handoff": {
+            "required": True,
+            "state": handoff_state,
+            "session_requirement": "new-prompt-or-refreshed-session",
+            "invocation": invocation if has_invocation else None,
+            "reload_hint": host_contract.get("reload_hint"),
+            "required_fact": "facts.current_turn_activation",
+            "required_provenance": "host-attachment",
+            "identity_requirement": "facts.identity.status=verified",
+            "required_receipt": LEGACY_ACTIVATION_RECEIPT_SCHEMA,
+            "required_receipt_status": LEGACY_ACTIVATION_RECEIPT_STATUS,
+            "required_receipt_note": (
+                "Retained for JSON compatibility only; it is not a gate and cannot "
+                "be generated or validated by the model as host evidence."
+            ),
+            "expected_identity": identity,
+            "prompt": prompt,
+            "proof_scope": identity_proof_scope + (
+                "The surrounding host session must still prove explicit activation; "
+                "identity and Installing-Agent reports cannot substitute for current-turn "
+                "host attachment provenance."
+            ),
+        },
+        "onboarding_gate": {
+            "allowed": False,
+            "status": "blocked-pending-explicit-activation",
+            "decision_owner": "current-host-session",
+            "required_facts": {
+                "identity": "verified",
+                "current_turn_activation": "observed-from-host-attachment-provenance",
+            },
+            "required_receipt": LEGACY_ACTIVATION_RECEIPT_SCHEMA,
+            "required_receipt_status": LEGACY_ACTIVATION_RECEIPT_STATUS,
+            "required_receipt_note": (
+                "Retained for JSON compatibility only; it never opens this gate."
+            ),
+            "required_identity_fingerprint": identity["fingerprint"],
+            "reference": str((target / "references" / "onboarding.md").resolve()),
+        },
+        "next_action": next_action,
+        # Compatibility fields retained for one receipt cycle. New consumers should
+        # use acceptance, activation_handoff, onboarding_gate, and next_action.
+        "runtime": identity["runtime"],
+        "onboarding_reference": str(
+            (target / "references" / "onboarding.md").resolve()
+        ),
+        "onboarding_prompt": onboarding_prompt(target, host_contract, identity),
+        "onboarding_state": "blocked-pending-explicit-activation",
+        "filesystem_status": filesystem_status,
+        "runtime_validation_status": runtime_validation_status,
+    }
+
+
+def preview_install_protocol(
+    source: Path,
+    target: Path,
+    version: str,
+    host_contract: dict[str, object],
+    *,
+    blocked: bool,
+) -> dict[str, object]:
+    identity = expected_skill_identity(target, source, version)
+    return {
+        "receipt_schema": "experience-loop.install/v2",
+        "facts_schema": HOST_FACTS_SCHEMA,
+        "facts": independent_lifecycle_facts(
+            identity,
+            identity_status="preview",
+            identity_evidence="preview-of-expected-installed-copy",
+            host_status="not-run",
+        ),
+        "acceptance": {
+            "host_lifecycle_fields_status": LEGACY_ACTIVATION_RECEIPT_STATUS,
+            "host_lifecycle_fields_note": (
+                "Use top-level facts for host lifecycle. The legacy host_discovery "
+                "and current_turn_activation fields are advisory only."
+            ),
+            "filesystem": {
+                "status": "blocked" if blocked else "preview",
+                "evidence": "preview-only",
+            },
+            "runtime": {
+                "status": "not-run",
+                "evidence": "not-run-during-dry-run",
+            },
+            "host_discovery": {
+                "status": "not-run",
+                "status_semantics": LEGACY_ACTIVATION_RECEIPT_STATUS,
+                "replacement": "facts.skill_availability",
+            },
+            "current_turn_activation": {
+                "status": "not-run",
+                "status_semantics": LEGACY_ACTIVATION_RECEIPT_STATUS,
+                "replacement": "facts.current_turn_activation",
+            },
+        },
+        "activation_handoff": {
+            "required": False,
+            "state": "blocked-before-installation" if blocked else "awaiting-installation",
+            "invocation": host_contract.get("invocation"),
+            "required_receipt": LEGACY_ACTIVATION_RECEIPT_SCHEMA,
+            "required_receipt_status": LEGACY_ACTIVATION_RECEIPT_STATUS,
+            "required_receipt_note": (
+                "Retained for JSON compatibility only; it is not an activation gate."
+            ),
+            "expected_identity": identity,
+            "prompt": None,
+        },
+        "onboarding_gate": {
+            "allowed": False,
+            "status": "blocked-before-installation",
+            "required_receipt": LEGACY_ACTIVATION_RECEIPT_SCHEMA,
+            "required_receipt_status": LEGACY_ACTIVATION_RECEIPT_STATUS,
+            "required_receipt_note": (
+                "Retained for JSON compatibility only; it never opens this gate."
+            ),
+        },
+        "next_action": {
+            "kind": "resolve-install-blockers" if blocked else "complete-installation",
+            "message": (
+                "Resolve the reported installation blockers, then preview again."
+                if blocked
+                else "Run the same validated installation without --dry-run."
+            ),
+        },
+        "filesystem_status": "preview-only",
+        "runtime_validation_status": "not-run-during-dry-run",
+    }
 
 
 def source_provenance(root: Path) -> dict[str, Any]:
@@ -390,7 +812,7 @@ def source_provenance(root: Path) -> dict[str, Any]:
 def validate_source(root: Path) -> None:
     problems = [
         problem
-        for relative in CURRENT_SOURCE_REQUIRED_FILES
+        for relative in PORTABLE_SKILL_PAYLOAD_FILES
         if (problem := required_file_validation_error(root, relative)) is not None
     ]
     if problems:
@@ -411,6 +833,133 @@ def normalized_target(path: Path) -> Path:
 
 def _same_path(left: Path, right: Path) -> bool:
     return os.path.normcase(str(left)) == os.path.normcase(str(right))
+
+
+def openai_plugin_context(skill_root: Path) -> Optional[dict[str, object]]:
+    """Recognize the Skill only when nested in a valid OpenAI Plugin bundle."""
+
+    root = normalized_target(skill_root)
+    if root.name.casefold() != SKILL_NAME or root.parent.name.casefold() != "skills":
+        return None
+    plugin_root = root.parent.parent
+    manifest_path = plugin_root / ".codex-plugin" / "plugin.json"
+    if _is_reparse_point(plugin_root) or _is_reparse_point(manifest_path):
+        return None
+    try:
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeError, json.JSONDecodeError):
+        return None
+    if not isinstance(manifest, dict) or manifest.get("name") != SKILL_NAME:
+        return None
+    version = manifest.get("version")
+    skills_path = manifest.get("skills")
+    if not isinstance(version, str) or not version.strip():
+        return None
+    if not isinstance(skills_path, str) or Path(skills_path).is_absolute():
+        return None
+    normalized_skills = Path(skills_path).as_posix().rstrip("/")
+    if normalized_skills not in {"skills", "./skills"}:
+        return None
+    expected_root = normalized_target(plugin_root / normalized_skills / SKILL_NAME)
+    if not _same_path(expected_root, root):
+        return None
+    return {
+        "kind": "openai-plugin",
+        "plugin_name": SKILL_NAME,
+        "plugin_version": version,
+        "plugin_root": str(plugin_root),
+        "skill_root": str(root),
+        "manifest": str(manifest_path),
+    }
+
+
+def source_only_contamination(root: Path) -> list[str]:
+    """List obvious repository/development content that must not ship to users."""
+
+    found = [relative for relative in SOURCE_ONLY_CONTAMINATION if (root / relative).exists()]
+    assets = root / "assets"
+    if assets.is_dir():
+        found.extend(
+            path.relative_to(root).as_posix()
+            for path in sorted(assets.glob("readme-*.svg"))
+            if path.is_file()
+        )
+    return sorted(set(found))
+
+
+def validate_host_managed_distribution(root: Path) -> None:
+    contamination = source_only_contamination(root)
+    if contamination:
+        raise RuntimeError(
+            "Host-managed copy contains source-only development content: "
+            + ", ".join(contamination)
+        )
+
+
+def plugin_manager_required_receipt(
+    skill_root: Path, operation: str
+) -> dict[str, object]:
+    context = openai_plugin_context(skill_root)
+    if context is None:
+        raise RuntimeError("The current Skill copy is not a validated OpenAI Plugin bundle.")
+    return {
+        "status": "host-manager-required",
+        "operation": operation,
+        "distribution": context,
+        "lifecycle_owner": "codex-plugin-manager",
+        "facts_schema": HOST_FACTS_SCHEMA,
+        "facts": {
+            "identity": {
+                "status": "not-evaluated",
+                "evidence": "run-verify-only-from-the-installed-copy",
+            },
+            "plugin_registration": {
+                "status": "unknown",
+                "evidence": "requires-host-plugin-manager-provenance",
+            },
+            "skill_availability": {
+                "status": "unknown",
+                "evidence": "requires-current-host-skill-registry-provenance",
+            },
+            "current_turn_activation": {
+                "status": "unknown",
+                "evidence": "requires-current-turn-host-attachment-provenance",
+                "identity_substitution": "forbidden",
+            },
+            "hook_observed": {
+                "status": "unknown",
+                "evidence": "requires-host-injected-hook-marker",
+            },
+        },
+        "registration_status": "unknown",
+        "enabled_status": "unknown",
+        "hook_trust_status": "unknown",
+        "hook_observation_status": "unknown",
+        "host_discovery_status": "unknown",
+        "current_turn_activation_status": "unknown",
+        "personal_data_preserved": True,
+        "personal_data_note": (
+            "No personal Experience Loop data was inspected or changed. The bundled "
+            "Plugin manifest was read only to identify the lifecycle owner; no host "
+            "Plugin cache file was changed."
+        ),
+        "next_action": {
+            "kind": "use-host-plugin-manager",
+            "message": (
+                "Resolve the installed Plugin id with the host Plugin manager, then perform "
+                "this lifecycle operation through that manager. Do not copy to or delete "
+                "from the host Plugin cache directly."
+            ),
+            "list_command": "codex plugin list --json",
+            "remove_command_template": (
+                "codex plugin remove <plugin-id-from-list> --json"
+            ),
+            "install_command_template": (
+                "codex plugin add <plugin-name@marketplace> --json"
+            ),
+            "session_requirement": "start-a-new-task-after-install-or-update",
+        },
+    }
 
 
 def _is_reparse_point(path: Path) -> bool:
@@ -1289,21 +1838,14 @@ def copy_runtime(
     transaction_root: Path,
     transaction_id: str,
 ) -> None:
-    for name in RUNTIME_ENTRIES:
-        item = source / name
-        if not item.exists():
-            continue
-        destination = staging / (
-            DORMANT_SKILL_MANIFEST if name == "SKILL.md" else name
+    for relative in PORTABLE_SKILL_PAYLOAD_FILES:
+        source_file = source.joinpath(*relative.split("/"))
+        destination_relative = (
+            DORMANT_SKILL_MANIFEST if relative == "SKILL.md" else relative
         )
-        if item.is_dir():
-            shutil.copytree(
-                item,
-                destination,
-                ignore=shutil.ignore_patterns("__pycache__", "*.pyc", ".DS_Store"),
-            )
-        else:
-            shutil.copy2(item, destination)
+        destination = staging.joinpath(*destination_relative.split("/"))
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(source_file, destination)
 
     marker = {
         "skill": SKILL_NAME,
@@ -1693,19 +2235,19 @@ def restore_backup(
             target, target, current_backup, host_contract, transaction_root
         ),
         "command_shell": "powershell" if os.name == "nt" else "posix",
-        "runtime": str((target / "scripts" / "experience_loop.py").resolve()),
-        "onboarding_reference": str(
-            (target / "references" / "onboarding.md").resolve()
+        **completed_install_protocol(
+            target,
+            target,
+            read_version(target),
+            host_contract,
+            "managed-install-rollback-validated",
+            "required-from-installed-copy",
         ),
-        "onboarding_prompt": onboarding_prompt(target),
-        "onboarding_state": "check_runtime_before_onboarding",
         "rollback_available": (
             current_backup is not None
             and rollback_source_error(current_backup) is None
         ),
         "rollback_note": rollback_note(current_backup),
-        "filesystem_status": "managed-install-rollback-validated",
-        "runtime_validation_status": "required-from-installed-copy",
     }
 
 
@@ -1756,16 +2298,16 @@ def install(
                 source, target, None, host_contract, transaction_root
             ),
             "command_shell": "powershell" if os.name == "nt" else "posix",
-            "runtime": str((target / "scripts" / "experience_loop.py").resolve()),
-            "onboarding_reference": str(
-                (target / "references" / "onboarding.md").resolve()
+            **completed_install_protocol(
+                target,
+                target,
+                read_version(source),
+                host_contract,
+                "managed-install-validated",
+                "required-from-installed-copy",
             ),
-            "onboarding_prompt": onboarding_prompt(target),
-            "onboarding_state": "check_runtime_before_onboarding",
             "rollback_available": False,
             "rollback_note": None,
-            "filesystem_status": "managed-install-validated",
-            "runtime_validation_status": "required-from-installed-copy",
         }
 
     discovery_roots = [Path(str(root)) for root in host_contract["discovery_roots"]]
@@ -1907,17 +2449,17 @@ def install(
             source, target, backup, host_contract, transaction_root
         ),
         "command_shell": "powershell" if os.name == "nt" else "posix",
-        "runtime": str((target / "scripts" / "experience_loop.py").resolve()),
-        "onboarding_reference": str(
-            (target / "references" / "onboarding.md").resolve()
+        **completed_install_protocol(
+            target,
+            target,
+            read_version(source),
+            host_contract,
+            "managed-install-validated",
+            "required-from-installed-copy",
         ),
-        "onboarding_prompt": onboarding_prompt(target),
-        "onboarding_state": "check_runtime_before_onboarding",
         "rollback_available": rollback_source_error(backup) is None
         and backup is not None,
         "rollback_note": rollback_note(backup),
-        "filesystem_status": "managed-install-validated",
-        "runtime_validation_status": "required-from-installed-copy",
     }
 
 
@@ -1934,6 +2476,17 @@ def main() -> int:
         else:
             print("安装失败 / Installation failed: " + message, file=sys.stderr)
         return 4
+    source = repo_root()
+    plugin_context = openai_plugin_context(source)
+    if plugin_context is not None and not args.verify_only:
+        result = plugin_manager_required_receipt(source, "install-or-update")
+        if args.json:
+            print(json.dumps(result, ensure_ascii=False, indent=2))
+        else:
+            print("Experience Loop: host-manager-required")
+            print("OpenAI Plugin lifecycle is owned by the Codex Plugin manager.")
+            print(result["next_action"]["message"])
+        return 3
     exit_code = 0
     try:
         target = validate_target_path(args.target)
@@ -1943,8 +2496,8 @@ def main() -> int:
                 raise RuntimeError(
                     "--verify-only cannot be combined with --restore-from, --dry-run, or --force."
                 )
-            source = repo_root()
             validate_source(source)
+            validate_host_managed_distribution(source)
             if not _same_path(source, target):
                 raise RuntimeError(
                     "--verify-only must run from the exact host-managed target copy."
@@ -1959,18 +2512,35 @@ def main() -> int:
                 "source": str(source),
                 "source_provenance": source_provenance(source),
                 "target": str(target),
-                "install_manager": "host-native",
-                **host_receipt(host_contract),
-                "runtime": str((target / "scripts" / "experience_loop.py").resolve()),
-                "onboarding_reference": str(
-                    (target / "references" / "onboarding.md").resolve()
+                "install_manager": (
+                    "codex-plugin-manager" if plugin_context else "host-native"
                 ),
-                "onboarding_prompt": onboarding_prompt(target),
-                "onboarding_state": "check_runtime_before_onboarding",
-                "filesystem_status": "complete-host-managed-copy-validated",
-                "runtime_validation_status": "required-from-installed-copy",
-                "lifecycle_owner": "current-host-native-install-manager",
+                **host_receipt(host_contract),
+                **completed_install_protocol(
+                    target,
+                    target,
+                    read_version(source),
+                    host_contract,
+                    "complete-host-managed-copy-validated",
+                    "required-from-installed-copy",
+                ),
+                "lifecycle_owner": (
+                    "codex-plugin-manager"
+                    if plugin_context
+                    else "current-host-native-install-manager"
+                ),
             }
+            if plugin_context:
+                result["distribution"] = plugin_context
+                result["plugin_lifecycle"] = {
+                    "registration_status": "unknown",
+                    "enabled_status": "unknown",
+                    "hook_trust_status": "unknown",
+                    "hook_observation_status": "unknown",
+                    "host_discovery_status": "unknown",
+                    "current_turn_activation_status": "unknown",
+                    "session_requirement": "start-a-new-task-after-install-or-update",
+                }
         elif args.restore_from is not None:
             if args.dry_run:
                 raise RuntimeError("--restore-from cannot be combined with --dry-run.")
@@ -1982,7 +2552,6 @@ def main() -> int:
                 transaction_root,
             )
         else:
-            source = repo_root()
             validate_source(source)
         if not args.verify_only and args.restore_from is None and args.dry_run:
             plan = install_plan(
@@ -2003,8 +2572,13 @@ def main() -> int:
                 "transaction_capability": plan["transaction_capability"],
                 "install_plan": plan,
                 **host_receipt(host_contract),
-                "filesystem_status": "preview-only",
-                "runtime_validation_status": "not-run-during-dry-run",
+                **preview_install_protocol(
+                    source,
+                    target,
+                    read_version(source),
+                    host_contract,
+                    blocked=blocked,
+                ),
             }
             if blocked:
                 exit_code = 4

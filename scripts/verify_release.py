@@ -47,6 +47,7 @@ PERSONAL_STATE_FILES = {
     "library.sqlite",
     "library.sqlite-shm",
     "library.sqlite-wal",
+    "controls.json",
     "profile.json",
     "state.json",
 }
@@ -233,8 +234,11 @@ def check_openai_metadata(root: Path = ROOT) -> list[str]:
         errors.append(
             "agents/openai.yaml default_prompt must be non-empty text invoking $experience-loop."
         )
-    if policy.get("allow_implicit_invocation") is not True:
-        errors.append("agents/openai.yaml allow_implicit_invocation must be true.")
+    if policy.get("allow_implicit_invocation") is not False:
+        errors.append(
+            "agents/openai.yaml allow_implicit_invocation must be false; "
+            "automatic scope is enforced by the controls-aware Plugin hook."
+        )
     root_resolved = root.resolve()
     for key in ("icon_small", "icon_large"):
         relative = interface.get(key)

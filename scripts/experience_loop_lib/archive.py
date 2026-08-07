@@ -23,23 +23,35 @@ from .common import (
     utc_now,
 )
 from .ledger import load_events
-from .profile import load_profile
+from .controls import load_controls, update_controls_locked
+from .profile import configure_profile, load_profile
 from .storage import Store
 
 
 MAX_IMPORT_BYTES = 1024 * 1024 * 1024
+ARCHIVE_SCHEMA_VERSION = 2
 PORTABLE_CATALOG = "knowledge/portable-catalog.json"
-REQUIRED_ARCHIVE_ENTRIES = {
+BASE_REQUIRED_ARCHIVE_ENTRIES = {
     "state.json",
     "profile.json",
     "projects/index.json",
     "ledger/events.jsonl",
 }
+REQUIRED_ARCHIVE_ENTRIES = {
+    1: BASE_REQUIRED_ARCHIVE_ENTRIES,
+    ARCHIVE_SCHEMA_VERSION: BASE_REQUIRED_ARCHIVE_ENTRIES | {"controls.json"},
+}
 PROJECT_ID_PATTERN = re.compile(r"^prj_[0-9a-f]{16}$")
 
 
 def _iter_export_files(store: Store, include_sources: bool) -> Iterable[Tuple[Path, str]]:
-    fixed = [store.state_path, store.profile_path, store.projects_index_path, store.ledger_path]
+    fixed = [
+        store.state_path,
+        store.controls_path,
+        store.profile_path,
+        store.projects_index_path,
+        store.ledger_path,
+    ]
     for path in fixed:
         if path.is_file():
             yield path, path.relative_to(store.home).as_posix()
@@ -297,6 +309,10 @@ def _export_archive_locked(
     force: bool = False,
 ) -> Dict[str, Any]:
     store.require_initialized()
+    if store.controls_path.exists():
+        load_controls(store)
+    else:
+        update_controls_locked(store)
     output = Path(destination).expanduser().resolve()
     if output.exists() and not force:
         raise ExperienceLoopError(
@@ -330,7 +346,7 @@ def _export_archive_locked(
             payloads.append((PORTABLE_CATALOG, catalog_payload))
     manifest = {
         "application": APP_NAME,
-        "archive_schema_version": SCHEMA_VERSION,
+        "archive_schema_version": ARCHIVE_SCHEMA_VERSION,
         "created_at": utc_now(),
         "includes_raw_sources": include_sources,
         "project_paths_removed": True,
@@ -365,15 +381,18 @@ def _export_archive_locked(
     }
 
 
-def _safe_archive_name(name: str) -> str:
+def _safe_archive_name(name: str, archive_schema_version: int) -> str:
     if not name or "\\" in name or ":" in name or "\x00" in name:
         raise DataCorruptionError("归档包含不安全路径：%s" % name)
     pure = PurePosixPath(name)
     if pure.is_absolute() or ".." in pure.parts or not pure.parts:
         raise DataCorruptionError("归档包含不安全路径：%s" % name)
-    if pure.parts[0] not in {"state.json", "profile.json", "projects", "ledger", "knowledge"}:
+    allowed_roots = {"state.json", "profile.json", "projects", "ledger", "knowledge"}
+    if archive_schema_version >= 2:
+        allowed_roots.add("controls.json")
+    if pure.parts[0] not in allowed_roots:
         raise DataCorruptionError("归档包含未知路径：%s" % name)
-    if pure.parts[0] in {"state.json", "profile.json"} and len(pure.parts) != 1:
+    if pure.parts[0] in {"state.json", "controls.json", "profile.json"} and len(pure.parts) != 1:
         raise DataCorruptionError("归档包含无效状态路径：%s" % name)
     return pure.as_posix()
 
@@ -386,19 +405,29 @@ def _read_manifest(archive: zipfile.ZipFile) -> Dict[str, Any]:
         raise DataCorruptionError("归档缺少有效 manifest.json。") from exc
     if not isinstance(manifest, dict) or manifest.get("application") != APP_NAME:
         raise DataCorruptionError("这不是 Experience Loop 归档。")
-    if manifest.get("archive_schema_version") != SCHEMA_VERSION:
+    archive_schema_version = manifest.get("archive_schema_version")
+    if (
+        type(archive_schema_version) is not int
+        or archive_schema_version not in REQUIRED_ARCHIVE_ENTRIES
+    ):
         raise DataCorruptionError("不支持的归档版本。")
     if not isinstance(manifest.get("entries"), list):
         raise DataCorruptionError("归档 manifest 的 entries 无效。")
     return manifest
 
 
-def _validate_import_staging(home: Path) -> None:
+def _validate_import_staging(home: Path, archive_schema_version: int) -> None:
     """Validate every required state layer before replacing an existing HOME."""
 
     staged_store = Store(str(home))
     staged_store.require_initialized()
     load_profile(staged_store)
+    if archive_schema_version >= 2:
+        load_controls(staged_store)
+    else:
+        # v1 stored mode/privacy in profile.json. Materialize the new controls
+        # layer inside staging before the directory becomes authoritative.
+        configure_profile(staged_store)
     projects_index = staged_store.load_projects_index()
     for project_id, summary in projects_index["projects"].items():
         if not isinstance(project_id, str) or not PROJECT_ID_PATTERN.match(project_id):
@@ -481,17 +510,24 @@ def _import_archive_locked(store: Store, source: str, *, replace: bool = False) 
         with archive:
             archive_file_count = len(archive.infolist())
             manifest = _read_manifest(archive)
+            archive_schema_version = int(manifest["archive_schema_version"])
             seen = set()
             for entry in manifest["entries"]:
                 if not isinstance(entry, dict):
                     raise DataCorruptionError("归档条目格式无效。")
-                name = _safe_archive_name(str(entry.get("path", "")))
+                name = _safe_archive_name(
+                    str(entry.get("path", "")), archive_schema_version
+                )
                 if name in seen:
                     raise DataCorruptionError("归档包含重复条目：%s" % name)
                 seen.add(name)
                 expected_size = entry.get("size")
                 expected_hash = entry.get("sha256")
-                if not isinstance(expected_size, int) or expected_size < 0 or not isinstance(expected_hash, str):
+                if (
+                    type(expected_size) is not int
+                    or expected_size < 0
+                    or not isinstance(expected_hash, str)
+                ):
                     raise DataCorruptionError("归档条目元数据无效：%s" % name)
                 total += expected_size
                 if total > MAX_IMPORT_BYTES:
@@ -527,7 +563,9 @@ def _import_archive_locked(store: Store, source: str, *, replace: bool = False) 
                         output.write(chunk)
                 if written != expected_size or digest.hexdigest() != expected_hash:
                     raise DataCorruptionError("归档完整性校验失败：%s" % name)
-            missing_required = sorted(REQUIRED_ARCHIVE_ENTRIES - seen)
+            missing_required = sorted(
+                REQUIRED_ARCHIVE_ENTRIES[archive_schema_version] - seen
+            )
             if missing_required:
                 raise DataCorruptionError(
                     "归档缺少必要状态文件：%s" % ", ".join(missing_required)
@@ -539,7 +577,7 @@ def _import_archive_locked(store: Store, source: str, *, replace: bool = False) 
             if raw_entries_present and not bool(manifest.get("includes_raw_sources")):
                 raise DataCorruptionError("归档声明不含原始资料，但实际包含原始知识库内容。")
         restored_knowledge_sources = _restore_knowledge_catalog(staging)
-        _validate_import_staging(staging)
+        _validate_import_staging(staging, archive_schema_version)
         if store.home.exists():
             backup = store.home.with_name(".%s-backup-%s" % (store.home.name, os.getpid()))
             if backup.exists():

@@ -17,6 +17,7 @@ def run_cli(
     home: Path,
     *args: str,
     cwd: Optional[Path] = None,
+    developer_source: bool = True,
 ) -> subprocess.CompletedProcess[str]:
     """Run the public CLI with an isolated user environment and JSON output."""
 
@@ -36,6 +37,10 @@ def run_cli(
             "PYTHONUTF8": "1",
         }
     )
+    if developer_source:
+        env["EXPERIENCE_LOOP_DEVELOPER_SOURCE"] = "1"
+    else:
+        env.pop("EXPERIENCE_LOOP_DEVELOPER_SOURCE", None)
     return subprocess.run(
         [
             sys.executable,

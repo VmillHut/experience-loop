@@ -128,6 +128,26 @@ class InstallTests(unittest.TestCase):
             self.assertEqual(first.returncode, 0, first.stderr)
             payload = json.loads(first.stdout)
             self.assertEqual(payload["status"], "installed")
+            installer = load_installer_module()
+            installed_files = {
+                path.relative_to(target).as_posix()
+                for path in target.rglob("*")
+                if path.is_file()
+            }
+            self.assertEqual(
+                installed_files,
+                set(installer.PORTABLE_SKILL_PAYLOAD_FILES)
+                | {installer.MARKER_NAME},
+            )
+            for source_only in (
+                "AGENTS.md",
+                "CONTRIBUTING.md",
+                "docs/DEVELOPMENT_COMPASS.md",
+                "scripts/build_plugin.py",
+                "scripts/verify_release.py",
+                "assets/readme-auto.zh.svg",
+            ):
+                self.assertNotIn(source_only, installed_files)
             self.assertTrue((target / "SKILL.md").is_file())
             self.assertTrue((target / "agents" / "openai.yaml").is_file())
             self.assertTrue((target / "vendor" / "manifest.json").is_file())
@@ -150,6 +170,162 @@ class InstallTests(unittest.TestCase):
             self.assertIn("所有画像问题都可跳过", payload["onboarding_prompt"])
             self.assertEqual(payload["host"], "codex")
             self.assertEqual(payload["invocation"], "$experience-loop")
+            self.assertEqual(payload["receipt_schema"], "experience-loop.install/v2")
+            self.assertEqual(
+                payload["facts_schema"], "experience-loop.host-facts/v1"
+            )
+            facts = payload["facts"]
+            self.assertEqual(
+                set(facts),
+                {
+                    "identity",
+                    "plugin_registration",
+                    "skill_availability",
+                    "current_turn_activation",
+                    "hook_observed",
+                },
+            )
+            self.assertEqual(facts["identity"]["status"], "verified")
+            self.assertEqual(facts["plugin_registration"]["status"], "not-observed")
+            self.assertEqual(facts["skill_availability"]["status"], "not-observed")
+            self.assertEqual(
+                facts["current_turn_activation"],
+                {
+                    "status": "not-observed",
+                    "evidence": "requires-current-turn-host-attachment-provenance",
+                    "identity_substitution": "forbidden",
+                },
+            )
+            self.assertEqual(facts["hook_observed"]["status"], "not-observed")
+            self.assertEqual(
+                payload["acceptance"]["filesystem"],
+                {
+                    "status": "verified",
+                    "evidence": "managed-install-validated",
+                },
+            )
+            self.assertEqual(payload["acceptance"]["runtime"]["status"], "pending")
+            self.assertEqual(
+                payload["acceptance"]["host_discovery"]["status"], "pending"
+            )
+            self.assertEqual(
+                payload["acceptance"]["current_turn_activation"]["status"],
+                "pending",
+            )
+            handoff = payload["activation_handoff"]
+            self.assertTrue(handoff["required"])
+            self.assertEqual(handoff["state"], "awaiting-explicit-invocation")
+            self.assertEqual(handoff["invocation"], "$experience-loop")
+            self.assertEqual(
+                handoff["required_receipt"], "experience-loop.activation/v1"
+            )
+            self.assertEqual(
+                handoff["required_receipt_status"], "deprecated-advisory"
+            )
+            self.assertIn("not a gate", handoff["required_receipt_note"])
+            self.assertEqual(
+                handoff["required_provenance"], "host-attachment"
+            )
+            self.assertIn("$experience-loop", handoff["prompt"])
+            identity = handoff["expected_identity"]
+            self.assertEqual(identity["name"], "experience-loop")
+            self.assertEqual(identity["version"], payload["version"])
+            self.assertEqual(Path(identity["root"]), target.resolve())
+            self.assertEqual(
+                identity["skill_sha256"],
+                hashlib.sha256((target / "SKILL.md").read_bytes()).hexdigest(),
+            )
+            self.assertEqual(
+                identity["runtime_sha256"],
+                hashlib.sha256(
+                    (target / "scripts" / "experience_loop.py").read_bytes()
+                ).hexdigest(),
+            )
+            fingerprint_input = {
+                "name": "experience-loop",
+                "root": os.path.normcase(str(target.resolve())),
+                "version": payload["version"],
+                "runtime_manifest_schema": identity["runtime_manifest_schema"],
+                "runtime_manifest_digest": identity["runtime_manifest_digest"],
+            }
+            expected_fingerprint = "sha256:" + hashlib.sha256(
+                json.dumps(
+                    fingerprint_input,
+                    ensure_ascii=False,
+                    sort_keys=True,
+                    separators=(",", ":"),
+                ).encode("utf-8")
+            ).hexdigest()
+            self.assertEqual(identity["fingerprint"], expected_fingerprint)
+            self.assertEqual(
+                identity["fingerprint_algorithm"],
+                "sha256:experience-loop-identity-v2",
+            )
+            self.assertEqual(
+                identity["runtime_contract_manifest"]["digest"],
+                identity["runtime_manifest_digest"],
+            )
+            self.assertGreater(identity["runtime_contract_manifest"]["file_count"], 20)
+            installed_identity = subprocess.run(
+                [
+                    sys.executable,
+                    "-B",
+                    "-c",
+                    (
+                        "import json, sys; "
+                        f"sys.path.insert(0, {str(target / 'scripts')!r}); "
+                        "from experience_loop_lib.identity import installed_identity; "
+                        "print(json.dumps(installed_identity(), ensure_ascii=False))"
+                    ),
+                ],
+                cwd=target,
+                text=True,
+                encoding="utf-8",
+                capture_output=True,
+                check=False,
+            )
+            self.assertEqual(
+                installed_identity.returncode, 0, installed_identity.stderr
+            )
+            observed_identity = json.loads(installed_identity.stdout)
+            self.assertEqual(observed_identity["root"], identity["root"])
+            self.assertEqual(observed_identity["fingerprint"], expected_fingerprint)
+            self.assertEqual(
+                observed_identity["fingerprint_algorithm"],
+                identity["fingerprint_algorithm"],
+            )
+            self.assertFalse(payload["onboarding_gate"]["allowed"])
+            self.assertEqual(
+                payload["onboarding_gate"]["status"],
+                "blocked-pending-explicit-activation",
+            )
+            self.assertEqual(
+                payload["onboarding_gate"]["required_identity_fingerprint"],
+                expected_fingerprint,
+            )
+            self.assertEqual(
+                payload["onboarding_gate"]["required_receipt_status"],
+                "deprecated-advisory",
+            )
+            self.assertEqual(
+                payload["onboarding_gate"]["required_facts"],
+                {
+                    "identity": "verified",
+                    "current_turn_activation": (
+                        "observed-from-host-attachment-provenance"
+                    ),
+                },
+            )
+            self.assertEqual(
+                payload["next_action"]["kind"], "explicit-skill-invocation"
+            )
+            self.assertEqual(
+                payload["next_action"]["expected_receipt_status"],
+                "deprecated-advisory",
+            )
+            self.assertNotIn("next_actions", payload)
+            self.assertIn("安装轮不能证明", payload["onboarding_prompt"])
+            self.assertIn("$experience-loop", payload["onboarding_prompt"])
             self.assertEqual(
                 payload["core_behavior_contract"], "unchanged-across-hosts"
             )
@@ -158,10 +334,13 @@ class InstallTests(unittest.TestCase):
                 "dynamic-host-contract-requires-session-validation",
             )
             self.assertEqual(
-                payload["host_contract_status"], "resolved-by-installing-agent"
+                payload["host_contract_status"], "reported-by-installing-agent"
             )
             self.assertEqual(
-                payload["discovery_roots_coverage"], "asserted-by-installing-agent"
+                payload["host_evidence_status"], "reported-unverified"
+            )
+            self.assertEqual(
+                payload["discovery_roots_coverage"], "reported-by-installing-agent"
             )
             self.assertEqual(payload["capabilities"]["guidance"], "installed-core")
             self.assertEqual(
@@ -202,7 +381,11 @@ class InstallTests(unittest.TestCase):
             self.assertIn("commit", provenance)
             self.assertIn("dirty", provenance)
             self.assertEqual(
-                payload["onboarding_state"], "check_runtime_before_onboarding"
+                payload["onboarding_state"],
+                "blocked-pending-explicit-activation",
+            )
+            self.assertEqual(
+                payload["onboarding_state"], payload["onboarding_gate"]["status"]
             )
 
             inherited = run_script(
@@ -357,6 +540,65 @@ class InstallTests(unittest.TestCase):
                 unrelated_sentinel.read_text(encoding="utf-8"), "do not move"
             )
 
+    def test_legacy_identity_fallback_is_limited_to_pre_v2_runtime_contracts(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="experience-loop-legacy-identity-") as raw:
+            root = Path(raw)
+            legacy = root / "legacy-copy"
+            (legacy / "scripts").mkdir(parents=True)
+            shutil.copy2(ROOT / "SKILL.md", legacy / "SKILL.md")
+            shutil.copy2(ROOT / "VERSION", legacy / "VERSION")
+            shutil.copy2(
+                ROOT / "scripts" / "experience_loop.py",
+                legacy / "scripts" / "experience_loop.py",
+            )
+            target = root / "installed" / "experience-loop"
+            installer = load_installer_module()
+
+            identity = installer.expected_skill_identity(
+                target,
+                legacy,
+                (legacy / "VERSION").read_text(encoding="utf-8").strip(),
+            )
+            self.assertEqual(
+                identity["fingerprint_algorithm"],
+                "sha256:experience-loop-identity-v1",
+            )
+            self.assertEqual(
+                identity["compatibility_scope"],
+                "legacy-pre-v2-runtime-contract",
+            )
+            self.assertNotIn("runtime_contract_manifest", identity)
+
+            receipt = installer.completed_install_protocol(
+                target,
+                legacy,
+                identity["version"],
+                {
+                    "invocation": "$experience-loop",
+                    "reload_hint": "new session",
+                },
+                "legacy-restored",
+                "legacy-runtime",
+            )
+            proof_scope = receipt["activation_handoff"]["proof_scope"]
+            self.assertIn("pre-v2 runtime contract", proof_scope)
+            self.assertIn("binds only", proof_scope)
+            self.assertIn("Reinstall or upgrade", proof_scope)
+
+            controls_module = (
+                legacy / "scripts" / "experience_loop_lib" / "controls.py"
+            )
+            controls_module.parent.mkdir(parents=True)
+            controls_module.write_text("# current-contract marker\n", encoding="utf-8")
+            with self.assertRaisesRegex(
+                RuntimeError, "refusing to downgrade the activation proof"
+            ):
+                installer.expected_skill_identity(
+                    target,
+                    legacy,
+                    identity["version"],
+                )
+
     def test_installer_reports_already_active_with_complete_absolute_handoff(self) -> None:
         with tempfile.TemporaryDirectory(prefix="experience-loop-active-") as raw:
             target = Path(raw) / "skills" / "experience-loop"
@@ -431,11 +673,12 @@ class InstallTests(unittest.TestCase):
     def test_verify_only_accepts_complete_host_managed_copy_without_marker(self) -> None:
         with tempfile.TemporaryDirectory(prefix="experience-loop-host-managed-") as raw:
             target = Path(raw) / "skills" / "experience-loop"
-            shutil.copytree(
-                ROOT,
-                target,
-                ignore=shutil.ignore_patterns(".git", "__pycache__", "*.pyc"),
-            )
+            installer = load_installer_module()
+            for relative in installer.PORTABLE_SKILL_PAYLOAD_FILES:
+                source = ROOT.joinpath(*relative.split("/"))
+                destination = target.joinpath(*relative.split("/"))
+                destination.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copy2(source, destination)
             marker = target / ".experience-loop-install.json"
             self.assertFalse(marker.exists())
 
@@ -457,6 +700,21 @@ class InstallTests(unittest.TestCase):
                 data["lifecycle_owner"], "current-host-native-install-manager"
             )
             self.assertFalse(marker.exists())
+
+            (target / "AGENTS.md").write_text("source-only\n", encoding="utf-8")
+            contaminated = run_python(
+                target / "scripts" / "install.py",
+                "--target",
+                str(target),
+                "--verify-only",
+                "--json",
+            )
+            self.assertEqual(contaminated.returncode, 4)
+            self.assertIn(
+                "source-only development content",
+                json.loads(contaminated.stdout)["error"],
+            )
+            (target / "AGENTS.md").unlink()
 
             duplicate = target.with_name("experience-loop-copy")
             shutil.copytree(target, duplicate)
@@ -481,19 +739,31 @@ class InstallTests(unittest.TestCase):
                 ignore=shutil.ignore_patterns(".git", "__pycache__", "*.pyc"),
             )
             (previous_source / "references" / "onboarding.md").unlink()
+            previous_identity = (
+                previous_source / "scripts" / "experience_loop_lib" / "identity.py"
+            )
+            identity_source = previous_identity.read_text(encoding="utf-8")
+            self.assertIn('    "references/onboarding.md",\n', identity_source)
+            previous_identity.write_text(
+                identity_source.replace(
+                    '    "references/onboarding.md",\n', "", 1
+                ),
+                encoding="utf-8",
+            )
             previous_installer = previous_source / "scripts" / "install.py"
             source = previous_installer.read_text(encoding="utf-8")
             self.assertIn('    "references/onboarding.md",\n', source)
             self.assertIn(
                 '        "runtime_contract": CURRENT_RUNTIME_CONTRACT,\n', source
             )
-            source = source.replace('    "references/onboarding.md",\n', "", 1)
+            source = source.replace('    "references/onboarding.md",\n', "")
             source = source.replace(
                 '        "runtime_contract": CURRENT_RUNTIME_CONTRACT,\n', "", 1
             )
             source = source.replace('        "installer_version": 4,\n', '        "installer_version": 3,\n', 1)
             current_contract_map = """RUNTIME_CONTRACT_FILES = {
     1: RUNTIME_CONTRACT_1_FILES,
+    2: RUNTIME_CONTRACT_2_FILES,
     CURRENT_RUNTIME_CONTRACT: CURRENT_SOURCE_REQUIRED_FILES,
 }
 """
@@ -1151,10 +1421,11 @@ class InstallTests(unittest.TestCase):
 
     def test_dynamic_host_contracts_install_identical_core_with_distinct_handoffs(self) -> None:
         digests: dict[str, str] = {}
+        fingerprints: dict[str, str] = {}
         expected = {
-            "Desktop Agent": "invoke experience-loop from the palette",
-            "Terminal Agent": "/experience-loop",
-            "Future Agent": "ask the host to use experience-loop",
+            "Standalone Skill": "$experience-loop",
+            "OpenAI Plugin": "$experience-loop:experience-loop",
+            "Host-inserted Plugin selector": "plugin://host-returned/experience-loop",
         }
         with tempfile.TemporaryDirectory(prefix="experience-loop-hosts-") as raw:
             root = Path(raw)
@@ -1185,12 +1456,43 @@ class InstallTests(unittest.TestCase):
                 self.assertEqual(preview_data["invocation"], invocation)
                 self.assertEqual(
                     preview_data["host_contract_status"],
-                    "resolved-by-installing-agent",
+                    "reported-by-installing-agent",
+                )
+                self.assertEqual(
+                    preview_data["host_evidence_status"], "reported-unverified"
                 )
                 self.assertEqual(
                     preview_data["discovery_status"],
                     "requires-host-session-validation",
                 )
+                self.assertEqual(
+                    preview_data["receipt_schema"], "experience-loop.install/v2"
+                )
+                self.assertEqual(
+                    preview_data["facts_schema"], "experience-loop.host-facts/v1"
+                )
+                self.assertEqual(
+                    preview_data["facts"]["current_turn_activation"],
+                    {
+                        "status": "not-run",
+                        "evidence": (
+                            "requires-current-turn-host-attachment-provenance"
+                        ),
+                        "identity_substitution": "forbidden",
+                    },
+                )
+                self.assertEqual(
+                    preview_data["activation_handoff"]["state"],
+                    "awaiting-installation",
+                )
+                self.assertEqual(
+                    preview_data["activation_handoff"]["required_receipt_status"],
+                    "deprecated-advisory",
+                )
+                self.assertEqual(
+                    preview_data["next_action"]["kind"], "complete-installation"
+                )
+                self.assertFalse(preview_data["onboarding_gate"]["allowed"])
 
                 installed = run_script(
                     "install.py",
@@ -1212,13 +1514,25 @@ class InstallTests(unittest.TestCase):
                 data = json.loads(installed.stdout)
                 self.assertEqual(data["host"], host)
                 self.assertEqual(data["invocation"], invocation)
-                self.assertNotIn(invocation, data["onboarding_prompt"])
+                self.assertEqual(
+                    data["activation_handoff"]["invocation"], invocation
+                )
+                self.assertIn(invocation, data["activation_handoff"]["prompt"])
+                self.assertIn(invocation, data["onboarding_prompt"])
+                self.assertEqual(
+                    data["next_action"]["kind"], "explicit-skill-invocation"
+                )
+                self.assertFalse(data["onboarding_gate"]["allowed"])
                 self.assertIn("完整核心已安装", data["onboarding_prompt"])
+                fingerprints[host] = data["activation_handoff"][
+                    "expected_identity"
+                ]["fingerprint"]
                 digests[host] = hashlib.sha256(
                     (target / "SKILL.md").read_bytes()
                 ).hexdigest()
 
             self.assertEqual(len(set(digests.values())), 1, digests)
+            self.assertEqual(len(set(fingerprints.values())), len(expected), fingerprints)
 
     def test_dynamic_contract_requires_target_and_never_claims_host_discovery(self) -> None:
         missing_target = run_script("install.py", "--dry-run", "--json")
@@ -1238,10 +1552,41 @@ class InstallTests(unittest.TestCase):
             data = json.loads(unresolved.stdout)
             self.assertEqual(data["host"], "current-agent")
             self.assertIsNone(data["invocation"])
-            self.assertEqual(data["host_contract_status"], "missing-host-evidence")
+            self.assertEqual(
+                data["host_contract_status"], "missing-installing-agent-report"
+            )
+            self.assertEqual(data["host_evidence_status"], "missing")
             self.assertEqual(
                 data["discovery_status"], "requires-host-session-validation"
             )
+            self.assertEqual(data["receipt_schema"], "experience-loop.install/v2")
+            self.assertEqual(
+                data["activation_handoff"]["state"], "awaiting-installation"
+            )
+            self.assertEqual(data["next_action"]["kind"], "complete-installation")
+
+            unresolved_installed = run_script(
+                "install.py",
+                "--target",
+                str(target),
+                "--json",
+            )
+            self.assertEqual(
+                unresolved_installed.returncode, 0, unresolved_installed.stderr
+            )
+            installed_data = json.loads(unresolved_installed.stdout)
+            self.assertEqual(
+                installed_data["activation_handoff"]["state"],
+                "awaiting-invocation-resolution",
+            )
+            self.assertIsNone(installed_data["activation_handoff"]["invocation"])
+            self.assertIsNone(installed_data["activation_handoff"]["prompt"])
+            self.assertEqual(
+                installed_data["next_action"]["kind"],
+                "resolve-explicit-invocation",
+            )
+            self.assertFalse(installed_data["onboarding_gate"]["allowed"])
+            self.assertIn("调用方式尚未解析", installed_data["onboarding_prompt"])
 
             bad_contract = run_script(
                 "install.py",

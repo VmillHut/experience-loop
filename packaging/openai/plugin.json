@@ -1,0 +1,37 @@
+{
+  "name": "experience-loop",
+  "version": "${VERSION}",
+  "description": "Adaptive engineering learning sidecar that preserves delivery quality while strengthening user judgment.",
+  "author": {
+    "name": "VmillHut",
+    "url": "https://github.com/VmillHut"
+  },
+  "homepage": "https://github.com/VmillHut/experience-loop",
+  "repository": "https://github.com/VmillHut/experience-loop",
+  "license": "MIT",
+  "keywords": [
+    "engineering",
+    "learning",
+    "verification",
+    "experience"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Experience Loop",
+    "shortDescription": "Grow engineering judgment while the Agent delivers.",
+    "longDescription": "A thin learning sidecar for substantive software work, with adaptive auto, focus, deep, and off modes.",
+    "developerName": "VmillHut",
+    "category": "Productivity",
+    "capabilities": [
+      "Interactive",
+      "Write"
+    ],
+    "defaultPrompt": [
+      "Use $experience-loop:experience-loop as a thin learning sidecar without reducing native engineering coverage.",
+      "Use $experience-loop:experience-loop in focus mode and help me practice one engineering judgment.",
+      "Use $experience-loop:experience-loop in deep mode for this architecture decision."
+    ],
+    "composerIcon": "./skills/experience-loop/assets/icon-small.svg",
+    "logo": "./skills/experience-loop/assets/icon-large.svg"
+  }
+}

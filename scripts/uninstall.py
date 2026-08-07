@@ -20,8 +20,10 @@ from install import (
     managed_install_validation_error,
     migrate_legacy_sibling_backups,
     normalized_stored_host_contract,
+    openai_plugin_context,
     other_discoverable_installations,
     planned_legacy_sibling_backups,
+    plugin_manager_required_receipt,
     park_skill_manifest,
     read_marker,
     restore_legacy_sibling_backups,
@@ -35,6 +37,8 @@ from install import (
 
 def default_target() -> Optional[Path]:
     installed_root = Path(__file__).resolve().parent.parent
+    if openai_plugin_context(installed_root) is not None:
+        return installed_root
     if managed_install_validation_error(installed_root) is None:
         return installed_root
     return None
@@ -140,6 +144,14 @@ def main() -> int:
                 "installed Experience Loop directory."
             )
         target = validate_target_path(args.target)
+        if openai_plugin_context(target) is not None:
+            result = plugin_manager_required_receipt(target, "uninstall")
+            if args.json:
+                print(json.dumps(result, ensure_ascii=False, indent=2))
+            else:
+                print(result["status"])
+                print(result["next_action"]["message"])
+            return 3
         validation_error = (
             managed_install_validation_error(target) if target.exists() else None
         )

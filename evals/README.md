@@ -7,6 +7,12 @@ untrusted-document prompt-injection sample.
 
 Current runs: [2026-08-06 auto quality and attention evaluation](2026-08-06-auto-quality-attention-report.md) and [2026-08-06 deep mode experience evaluation](2026-08-06-deep-mode-experience-report.md).
 
+The current release gate also includes the repeatable
+[activation, attention, and capability-monotonic evaluation](activation-policy-evaluation.md),
+backed by machine-readable [activation policy cases](activation-policy-cases.json).
+It separates SessionStart routing from later task participation so a short global
+router is not mistaken for proof that the full Skill should join every request.
+
 Historical runs: [auto and onboarding experience evaluation](2026-08-06-auto-onboarding-experience-report.md) and [pre-redesign mode evaluation](2026-08-06-mode-experience-report.md). They predate the capability-monotonic controller and should not be used as the current behavior contract.
 
 Never run the blind evaluation directly against these originals. Prepare an

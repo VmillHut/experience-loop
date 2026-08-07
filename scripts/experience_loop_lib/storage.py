@@ -26,6 +26,7 @@ from .common import (
 class Store:
     MANAGED_TOP_LEVEL = {
         "state.json",
+        "controls.json",
         "profile.json",
         "projects",
         "ledger",
@@ -37,6 +38,7 @@ class Store:
     def __init__(self, home: Optional[str] = None):
         self.home = resolve_home(home)
         self.state_path = self.home / "state.json"
+        self.controls_path = self.home / "controls.json"
         self.profile_path = self.home / "profile.json"
         self.projects_dir = self.home / "projects"
         self.projects_index_path = self.projects_dir / "index.json"
@@ -126,6 +128,7 @@ class Store:
             self._make_private(directory, 0o700)
         for path in (
             self.state_path,
+            self.controls_path,
             self.profile_path,
             self.projects_index_path,
             self.ledger_path,
@@ -146,6 +149,7 @@ class Store:
             self.knowledge_dir,
             self.archives_dir,
             self.state_path,
+            self.controls_path,
             self.profile_path,
             self.projects_index_path,
             self.ledger_path,
@@ -259,6 +263,11 @@ class Store:
         return state
 
     def touch_state(self) -> None:
+        with self.lock():
+            self.touch_state_locked()
+
+    def touch_state_locked(self) -> None:
+        """Update the state timestamp while the caller holds the store lock."""
         state = self.require_initialized()
         state["updated_at"] = utc_now()
         atomic_write_json(self.state_path, state)

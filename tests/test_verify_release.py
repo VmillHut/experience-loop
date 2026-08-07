@@ -38,7 +38,7 @@ class VerifyReleaseTests(unittest.TestCase):
         self.assertEqual(verify_release.check_skill(ROOT), [])
         self.assertEqual(verify_release.check_openai_metadata(ROOT), [])
         self.assertEqual(verify_release.check_version_consistency(ROOT), [])
-        self.assertEqual(verify_release.check_tag_consistency("v0.1.0", ROOT), [])
+        self.assertEqual(verify_release.check_tag_consistency("v0.2.0", ROOT), [])
         self.assertEqual(verify_release.check_publish_placeholders(ROOT), [])
         self.assertEqual(verify_release.check_vendor(ROOT), [])
 
@@ -98,13 +98,13 @@ class VerifyReleaseTests(unittest.TestCase):
                 '  default_prompt: ""\n'
                 "# $experience-loop\n"
                 "policy:\n"
-                "  allow_implicit_invocation: false\n",
+                "  allow_implicit_invocation: true\n",
                 encoding="utf-8",
             )
             decoy_errors = "\n".join(verify_release.check_openai_metadata(root))
             self.assertIn("short_description must be non-empty", decoy_errors)
             self.assertIn("default_prompt must be non-empty", decoy_errors)
-            self.assertIn("allow_implicit_invocation must be true", decoy_errors)
+            self.assertIn("allow_implicit_invocation must be false", decoy_errors)
 
     def test_version_check_rejects_runtime_and_changelog_drift(self) -> None:
         with tempfile.TemporaryDirectory(prefix="experience-loop-release-version-") as raw:
@@ -140,12 +140,15 @@ class VerifyReleaseTests(unittest.TestCase):
             (cache / "runtime.cpython-312.pyc").write_bytes(b"not-bytecode")
             personal = root / ".experience-loop"
             personal.mkdir()
+            (personal / "controls.json").write_text("{}\n", encoding="utf-8")
             (personal / "profile.json").write_text("{}\n", encoding="utf-8")
+            (root / "controls.json").write_text("{}\n", encoding="utf-8")
             (root / "profile.json").write_text("{}\n", encoding="utf-8")
             errors = verify_release.check_release_artifacts(root)
             rendered = "\n".join(errors)
             self.assertIn("__pycache__", rendered)
             self.assertIn(".experience-loop", rendered)
+            self.assertIn("controls.json", rendered)
             self.assertIn("profile.json", rendered)
 
     def test_vendor_check_rejects_unmanifested_wheel_and_missing_license(self) -> None:

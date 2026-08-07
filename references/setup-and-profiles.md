@@ -33,17 +33,20 @@ The user may answer any subset in natural language. Save only what was actually 
 
 ## First-run sequence
 
-1. After a successful installation handoff, invoke the Skill and follow [onboarding.md](onboarding.md).
+1. After installation, start a new prompt or refreshed session and use the host's real UI or attachment mechanism to select the exact Skill. Ordinary selector-like text and a filesystem read of `SKILL.md` are not activation. Verify the host-attached copy's read-only identity against the install receipt when available, then follow [onboarding.md](onboarding.md). Never synthesize missing host provenance with a model-authored token or receipt.
 2. Confirm that every profile answer is optional, then ask the concrete profile questions in one compact message rather than a settings menu.
-3. Run `setup` once with only the answered fields. If the user skips all fields, run default setup without inventing answers. Show the resolved external data location on this first write.
+3. Run `setup` once with only the answered fields. It is the only public command that may create first-run state; `control set` and `mode <value>` require an initialized HOME. If the user skips all fields, run default setup without inventing answers. Show the resolved external data location and report only that local state was initialized, with `host_activation=not_evaluated`.
 4. Do not scan a project, ingest a document, edit Agent instructions, or enable external services during onboarding unless the user explicitly authorizes that separate operation.
 5. Ask whether the user wants the fixed short usage tutorial. Run it only after consent.
 6. If the user arrived with urgent or active work, defer onboarding and execute the task first.
 7. Later profile changes may arrive as one natural-language sentence; update only the changed fields.
-8. Offer the global Agent router only to users who explicitly want implicit activation across projects.
-9. Run `doctor` only for an actual runtime concern, repair, installation validation, or explicit request.
+8. Keep activation scope separate from mode. Default to `explicit`; offer `project` only as a narrower optional preference. Treat `global` as broader attention cost requiring explicit consent.
+9. For the OpenAI Plugin, `project/global` save only a routing preference. Keep adapter capability `pending_new_session_verification` until a later new/resumed/refreshed task contains the host-injected Hook marker; even then the marker proves only Hook execution, not Skill availability or current-turn activation.
+10. Run `doctor` only for an actual runtime concern, repair, installation validation, or explicit request.
 
 Setup is idempotent. Re-running it must preserve existing data unless the user explicitly confirms reset or replacement.
+
+When the runtime detects a development repository checkout, first `setup` fails closed because repository files are not host activation. A developer may set `EXPERIENCE_LOOP_DEVELOPER_SOURCE=1` only to exercise the local runtime intentionally. This override is a development allowance, never host evidence, and installed clean copies do not need it.
 
 Interpret runtime status fields literally: `knowledge_sources` counts active logical sources, `knowledge_materialized_sources` counts sources with a local indexed revision, `knowledge_placeholder_sources` counts portable records waiting for their original file, and `knowledge_storage_files` counts physical files under Knowledge Lens storage. If source metadata cannot be read, the source counts are `null` with an explicit status/error; do not reinterpret them as zero.
 
@@ -57,13 +60,14 @@ Keep runtime state outside the installed Skill and source repositories. Resolve 
 2. `EXPERIENCE_LOOP_HOME` environment variable;
 3. runtime default for the current user.
 
-An explicit `--home` applies only to that command. Once a custom home is chosen, the Agent must reuse it for `setup`, `status`, `doctor`, and later lifecycle checks, or keep the same `EXPERIENCE_LOOP_HOME` in scope. Do not run an unqualified status against the default home and conclude that a customized home is uninitialized.
+An explicit `--home` applies only to that command. Once a custom home is chosen, the Agent must reuse it for `setup`, `status`, `doctor`, and later lifecycle checks, or keep the same `EXPERIENCE_LOOP_HOME` in scope. For `project/global` automatic routing, persist that matching environment variable for later host sessions; the Hook cannot discover controls from an earlier one-off `--home`. Treat a machine-readable `adapter.requirement` from `setup/control` as an unresolved host-adapter prerequisite. Explicit invocation remains available without it. Do not run an unqualified status against the default home and conclude that a customized home is uninitialized.
 
 The logical layout is:
 
 ```text
 <experience-loop-home>/
   state.json
+  controls.json
   profile.json
   projects/
     index.json
@@ -86,8 +90,7 @@ Record stable preferences, not a personality verdict. Useful fields include:
 - responsibilities and technical or business domains;
 - near-term goals and active learning directions;
 - explanation style, guidance preference, and delivery context;
-- default mode (`auto`, `focus`, `deep`, or `off`);
-- privacy boundary and schema version.
+- personalization schema and content trust markers.
 
 Treat inferred strengths and gaps as hypotheses with confidence, evidence references, and last-updated timestamps. Never label the user from a single task.
 
@@ -137,27 +140,35 @@ Prefer a targeted scan. Skip dependency caches, build outputs, generated artifac
 
 Refresh stale or contradicted fields from current source. Project profiles are navigation aids, not authority.
 
-## Mode persistence and personalization boundaries
+## Mode persistence, activation scope, and personalization boundaries
 
 The controller lives in [SKILL.md](../SKILL.md), with non-exhaustive decision guidance in [workflow.md](workflow.md). Do not copy or redefine that controller in profile storage, host prompts, or routers.
+
+`controls.json` is the single authority for `default_mode`, `activation_scope`, and `privacy`; its `profile_customized` field is the lightweight advisory value used without reading profile content. `profile.json` keeps content-bearing personalization; its stored `mode`, `privacy`, and `customized` fields are compatibility mirrors only. A missing controls file may be read through from a legacy profile, but a damaged controls file must fail closed rather than fall back to stale profile values.
+
+`doctor` treats a mismatch between those three stored profile mirrors and `controls.json` as a state-integrity failure. This catches a previous runtime writing only `profile.json` and the crash window between coordinated controls/profile writes. `doctor --repair` acquires the data-directory lock and copies only the authoritative mirror values into `profile.json`; it does not recompute or replace name, role, responsibilities, goals, preferences, or other profile content.
 
 This reference governs persistence only:
 
 - `auto` is the default; `focus`, `deep`, and `off` are saved only by explicit user choice;
 - natural-language mode requests remain task-scoped unless the user asks to persist them;
+- `activation_scope=explicit|project|global` affects only automatic host routing, never the mode's meaning, reasoning strength, task plan, or verification;
+- explicit selection can always enter the control plane, including from saved `off`, so the user can change controls;
 - a profile may rank already-safe learning candidates and adjust terminology, explanation, participation, or learning depth only after the task-quality plan is intact;
 - a profile must never change the host Agent's planning, tools, risk coverage, implementation, verification, recovery, or reporting of material findings;
 - explicit feedback is evidence for later decisions, not a permanent global rule inferred from one interaction.
 
-An explicitly saved `focus` or `deep` default remains a continuing user choice until changed; it is not inferred from complexity. Do not persist a one-off mode request silently.
+An explicitly saved `focus` or `deep` default remains a continuing user choice until changed; it is not inferred from complexity. Modes are intent contracts, not fixed methods or ceilings. Let stronger current and future Agents select better interactions from task evidence without weakening the intent. Do not persist a one-off request silently.
 
 Even in `focus` or `deep`, urgent recovery takes precedence; return to deliberate practice only after health is restored. Do not ask the user to switch modes for a condition the Agent can detect.
 
 Normalize legacy settings without manual migration: `ship` and `incident` become `auto`, and `coach` becomes `focus`. `deep` remains a first-class current mode. Keep accepting old command names for compatibility, but show only the four current modes in help and onboarding.
 
-## Optional host-level Agent router
+## Automatic activation and the optional host-level fallback router
 
-The Skill must work without a global prompt. Offer a minimal router only when the user explicitly wants implicit activation across projects and the current Agent has verified its host's current global-instruction mechanism. Do not rely on a static host path or translate old host instructions by analogy; use [host-compatibility.md](host-compatibility.md).
+Prefer the OpenAI Plugin's controls-aware SessionStart Hook. It reads only `controls.json`, injects nothing for missing/corrupt state, `off`, `explicit`, a missing/invalid host `session_id`, or a non-project `project` session. Otherwise it adds a short `experience-loop.host-hook/v1` marker and bounded routing hint. That host-injected marker proves only that the approved Hook ran in this session. It does not prove Skill availability or selection, never loads the full Skill itself, and must not cause the Agent to read any repository or installed `SKILL.md` as a fallback. Saving scope alone cannot claim success; observe adapter behavior only in a new, resumed, or refreshed task.
+
+The Skill must work without a global prompt. The static router is a compatibility fallback only when Plugin Hooks are unavailable and the user explicitly accepts global instruction overhead. It cannot prove dynamic Host activation as reliably as the Hook and must not duplicate the controller or store a mode value. Do not rely on a static path or translate old host instructions by analogy; use [host-compatibility.md](host-compatibility.md).
 
 Before writing:
 
@@ -186,11 +197,11 @@ Separate the portable Skill code from personal data:
 - encrypt or protect exported private data using the user's chosen mechanism;
 - import into a new machine only after showing what categories will be restored.
 
-An export must contain schema/version metadata and checksums. Import must validate before replacing current state. In archive receipts, `files` means actual ZIP entries including `manifest.json`, while `payload_files` means entries declared by the manifest. Prefer merge with a conflict report over silent overwrite.
+An export must contain schema/version metadata and checksums. Import must validate before replacing current state. Archive schema versions and declared entry sizes are JSON integers; booleans and floating-point values are rejected even when a language would compare them equal to an integer. In archive receipts, `files` means actual ZIP entries including `manifest.json`, while `payload_files` means entries declared by the manifest. Prefer merge with a conflict report over silent overwrite.
 
 ## Repair and reset
 
-Use doctor first. Repair indexes from immutable sources and ledger facts where possible. Never fabricate missing evidence.
+Use doctor first. A profile-control-mirror failure is repairable with `doctor --repair`; the repair synchronizes only compatibility fields from authoritative controls under the store lock. Repair indexes from immutable sources and ledger facts where possible. Never fabricate missing evidence.
 
 For reset or deletion:
 

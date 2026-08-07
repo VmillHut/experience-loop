@@ -11,11 +11,11 @@ import tempfile
 import time
 import uuid
 from pathlib import Path
-from typing import Any, Dict, Iterator, Optional
+from typing import Any, Dict, Iterator, Optional, Sequence, Tuple
 
 
 APP_NAME = "experience-loop"
-VERSION = "0.1.0"
+VERSION = "0.2.0"
 SCHEMA_VERSION = 1
 
 EXIT_OK = 0
@@ -28,6 +28,7 @@ EXIT_IO = 7
 EXIT_UNEXPECTED = 10
 
 MODES = ("auto", "focus", "deep", "off")
+ACTIVATION_SCOPES = ("explicit", "project", "global")
 LEGACY_MODE_ALIASES = {
     "ship": "auto",
     "coach": "focus",
@@ -70,6 +71,16 @@ def normalize_mode(value: str) -> str:
     if normalized not in MODES:
         raise ExperienceLoopError(
             "未知模式：%s。可用模式为 auto、focus、deep、off。" % value
+        )
+    return normalized
+
+
+def normalize_activation_scope(value: str) -> str:
+    """Return a supported persisted automatic-activation scope."""
+    normalized = str(value).strip().lower()
+    if normalized not in ACTIVATION_SCOPES:
+        raise ExperienceLoopError(
+            "未知激活范围：%s。可用范围为 explicit、project、global。" % value
         )
     return normalized
 
@@ -153,6 +164,80 @@ def atomic_write_text(path: Path, text: str) -> None:
 
 def atomic_write_json(path: Path, value: Any) -> None:
     atomic_write_text(path, json.dumps(value, ensure_ascii=False, indent=2, sort_keys=True) + "\n")
+
+
+def capture_file_snapshot(path: Path) -> Optional[bytes]:
+    """Capture exact file contents, using ``None`` only for an absent file."""
+
+    try:
+        return path.read_bytes()
+    except FileNotFoundError:
+        return None
+    except OSError as exc:
+        raise ExperienceLoopError(
+            "无法读取待更新文件：%s" % path,
+            EXIT_IO,
+            {"path": str(path), "reason": str(exc)},
+        ) from exc
+
+
+def _atomic_restore_bytes(path: Path, value: bytes) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    descriptor = -1
+    temporary_name = None
+    try:
+        descriptor, temporary_name = tempfile.mkstemp(
+            prefix=".%s." % path.name,
+            suffix=".rollback.tmp",
+            dir=str(path.parent),
+        )
+        with os.fdopen(descriptor, "wb") as handle:
+            descriptor = -1
+            handle.write(value)
+            handle.flush()
+            os.fsync(handle.fileno())
+        os.replace(temporary_name, str(path))
+        temporary_name = None
+    except OSError as exc:
+        raise ExperienceLoopError(
+            "回滚失败：%s" % path,
+            EXIT_IO,
+            {"path": str(path), "reason": str(exc)},
+        ) from exc
+    finally:
+        if descriptor >= 0:
+            os.close(descriptor)
+        if temporary_name:
+            with contextlib.suppress(OSError):
+                os.unlink(temporary_name)
+
+
+def restore_file_snapshots(
+    snapshots: Sequence[Tuple[Path, Optional[bytes]]],
+    *,
+    operation: str,
+    original_error: Exception,
+) -> None:
+    """Restore files in caller-supplied rollback order or surface rollback failure."""
+
+    failures = []
+    for path, snapshot in snapshots:
+        try:
+            if snapshot is None:
+                path.unlink(missing_ok=True)
+            else:
+                _atomic_restore_bytes(path, snapshot)
+        except (OSError, ExperienceLoopError) as exc:
+            failures.append({"path": str(path), "reason": str(exc)})
+    if failures:
+        raise ExperienceLoopError(
+            "%s失败，且未能完整回滚。" % operation,
+            EXIT_IO,
+            {
+                "original_error": str(original_error),
+                "rollback_failures": failures,
+            },
+        ) from original_error
 
 
 class FileLock:
