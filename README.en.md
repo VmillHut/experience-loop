@@ -64,9 +64,11 @@ https://github.com/VmillHut/experience-loop
 Follow the repository-specific safety and acceptance contract in `docs/AI_INSTALL.en.md`.
 ```
 
-| 01 · Resolve the host | 02 · Install and verify | 03 · Optional onboarding |
-| --- | --- | --- |
-| The Agent discovers the current host's live directories, discovery behavior, and capability boundaries. | Deterministic installation performs safe writes and verifies complete files, runtime health, and actual host discovery. | One short questionnaire you may skip entirely, plus an optional two-minute conversational tutorial. |
+| Stage | What the Agent completes |
+| --- | --- |
+| <strong>01 · Resolve the host</strong> | Discover the current host's live directories, discovery behavior, and capability boundaries. |
+| <strong>02 · Install and verify</strong> | Perform safe writes with the deterministic installer, then verify complete files, runtime health, and actual host discovery. |
+| <strong>03 · Optional onboarding</strong> | Offer one short questionnaire that may be skipped entirely, plus an optional two-minute conversational tutorial. |
 
 After installation, only one choice remains:
 
@@ -98,9 +100,11 @@ The core mechanism behind the default `auto` mode is not "interrupt less" and no
   <img src="assets/readme-auto.en.svg" alt="Experience Loop selects a response from live task evidence, the value of a human judgment, and whether it is the right moment to intervene" width="100%">
 </div>
 
-| Valuable | Verifiable | Appropriate now |
-| --- | --- | --- |
-| The question tests engineering judgment, not a retrievable fact, and clearly matters to real responsibility or later reuse. | Your choice can be checked against later logs, code, tests, or outcomes; revealing the answer first would destroy prediction value. | Waiting will not lower safety, correctness, or delivery quality, and the task is not in urgent recovery or emergency release. |
+### Three conditions for intervention
+
+- <strong>Valuable</strong>: the question tests engineering judgment, not a retrievable fact, and clearly matters to real responsibility or later reuse.
+- <strong>Verifiable</strong>: your choice can be checked against later logs, code, tests, or outcomes; revealing the answer first would destroy prediction value.
+- <strong>Appropriate now</strong>: waiting will not lower safety, correctness, or delivery quality, and the task is not in urgent recovery or emergency release.
 
 Only when all three hold may `auto` genuinely wait for your judgment. You remain in control: say "skip," "just do it," "delivery only," or switch to `off` at any time, and the Agent must continue immediately without punishment or repeated pressure.
 
