@@ -31,7 +31,7 @@
 ## 01 · 30 秒看懂它
 
 <blockquote>
-  <p><small><small><strong>Experience Loop 是一个 Agent Skill：Agent 照常交付；只在关键节点保留你的工程判断，并用真实证据让它越来越准。</strong></small></small></p>
+  <p><small><small><strong>Experience Loop 是 Agent Skill：Agent 照常交付；关键节点由你做工程判断，真实证据让它越来越准。</strong></small></small></p>
 </blockquote>
 
 - <strong>Agent 继续负责：</strong>分析、实现、测试、验证与交付。
@@ -124,7 +124,7 @@ https://github.com/VmillHut/experience-loop
 | <strong><code>deep</code><br>完&#8288;整&#8288;推&#8288;演</strong> | 你显式授权全深度 | 在真实任务中建立模型、比较方案、预测失效、审查设计，再用证据纠正与迁移。 |
 | <strong><code>off</code><br>只&#8288;交&#8288;付</strong> | 你关闭学习层 | 与普通 Agent 一致：不读画像、不提问、不追加学习总结、不记录学习事件。 |
 
-　　模式随时用自然语言切换，不需要重新初始化：
+模式随时用自然语言切换，不需要重新初始化：
 
 ```text
 这次使用 focus，我想练习根因定位。
