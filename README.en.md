@@ -6,8 +6,6 @@
   <p><strong style="color:#0F766E">It strengthens your judgment, not the Agent's.</strong></p>
   <p style="color:#64748B">The task is still delivered at full quality; Experience Loop only keeps the engineering judgments that truly matter with you, and uses real evidence to make them more accurate over time.</p>
 
-  <img src="assets/readme-hero.svg" alt="Abstract Experience Loop visual connecting a task, Agent execution, evidence, and human judgment" width="100%">
-
   <p>
     <a href="https://github.com/VmillHut/experience-loop/actions/workflows/ci.yml"><img src="https://github.com/VmillHut/experience-loop/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
     <img src="https://img.shields.io/badge/Python-3.9%2B-18B6A4?logo=python&logoColor=white" alt="Python 3.9+">

@@ -6,8 +6,6 @@
   <p><strong style="color:#0F766E">它提升的不是 Agent 的能力，而是你的判断力。</strong></p>
   <p style="color:#64748B">任务照常由 Agent 高质量完成；Experience Loop 只在真正值得的节点，把工程判断留给你，用真实证据让它越练越准。</p>
 
-  <img src="assets/readme-hero.svg" alt="由任务、Agent 执行、证据和人的判断构成的 Experience Loop 抽象主视觉" width="100%">
-
   <p>
     <a href="https://github.com/VmillHut/experience-loop/actions/workflows/ci.yml"><img src="https://github.com/VmillHut/experience-loop/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
     <img src="https://img.shields.io/badge/Python-3.9%2B-18B6A4?logo=python&logoColor=white" alt="Python 3.9+">
