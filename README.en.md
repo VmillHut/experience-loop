@@ -30,7 +30,9 @@
 
 ## 01 · Understand it in 30 seconds
 
-> **Experience Loop is an Agent Skill: the Agent still delivers the task; only at the moments that truly matter, it keeps engineering judgment with you and uses real evidence to sharpen it over time.**
+<blockquote>
+  <p><small><strong>Experience Loop is an Agent Skill: the Agent still delivers the task; only at the moments that truly matter, it keeps engineering judgment with you and uses real evidence to sharpen it over time.</strong></small></p>
+</blockquote>
 
 - <strong>The Agent still owns:</strong> analysis, implementation, testing, validation, and delivery.
 - <strong>You retain and grow:</strong> defining the right problem, understanding boundaries, reviewing evidence, making trade-offs, and owning real outcomes.

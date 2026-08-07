@@ -30,7 +30,9 @@
 
 ## 01 · 30 秒看懂它
 
-> **Experience Loop 是一个 Agent Skill：Agent 照常完成任务；它只在真正值得的节点，把工程判断留给你，并用真实证据让这些判断越来越准。**
+<blockquote>
+  <p><small><strong>Experience Loop 是一个 Agent Skill：Agent 照常完成任务；它只在真正值得的节点，把工程判断留给你，并用真实证据让这些判断越来越准。</strong></small></p>
+</blockquote>
 
 - <strong>Agent 继续负责：</strong>分析、实现、测试、验证与交付。
 - <strong>你保留并增长：</strong>定义正确问题、理解系统边界、审查证据、做工程取舍、承担真实结果。
@@ -182,7 +184,7 @@ https://github.com/VmillHut/experience-loop
 
 ## 06 · 个性化与知识扩展
 
-　　不需要配置页面。画像、资料、数据与参考项目都可以用一句自然语言按需接入：
+不需要配置页面。画像、资料、数据与参考项目都可以用一句自然语言按需接入：
 
 | 能力 | 一句话示例 | 默认边界 |
 | --- | --- | --- |
