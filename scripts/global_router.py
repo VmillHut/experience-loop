@@ -19,16 +19,10 @@ import tempfile
 START = "<!-- experience-loop:router:start -->"
 END = "<!-- experience-loop:router:end -->"
 ROUTER_BODY = """For substantive software-development work, apply the locally
-installed `experience-loop` Skill when a
-reusable human judgment may justify the interaction cost. Resolve an explicitly
-saved mode; otherwise implicit use starts in `auto` and intelligently chooses
-silence, embedded guidance, an optional checkpoint, a required judgment
-checkpoint, or a short guided practice loop from consequence, uncertainty,
-transfer value, user profile, time pressure, and interaction cost. A required
-checkpoint may briefly wait only when participation is valuable and safe; honor
-"skip", "just do it", urgent recovery, explicit "delivery only", and `off`
-immediately. Never infer a standing `focus` or `deep` contract from complexity.
-One learning seam must not narrow engineering or verification coverage.
+installed `experience-loop` Skill as a thin learning sidecar. Preserve the host
+Agent's native planning, tools, engineering coverage, and verification. Let the
+Skill's current `auto` controller detect and decide instead of duplicating its
+logic here. Honor explicit `off` and delivery-only requests.
 """
 
 

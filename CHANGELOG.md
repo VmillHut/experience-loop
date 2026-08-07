@@ -6,7 +6,7 @@ All notable user-facing changes to this project are documented here. The format 
 
 ### Added
 
-- Adaptive `auto` control that weighs consequence, uncertainty, transfer value, profile relevance, time pressure, and interaction cost, then chooses silence, embedded guidance, an optional checkpoint, a required judgment checkpoint, or a short guided practice loop without creating an implicit standing `focus` or `deep` contract.
+- Detection-first `auto` control that observes task evidence, detects activated risks and reusable capability seams, then intelligently chooses the useful learning response without a default strength or fixed answer quota.
 - A six-direction capability compass and evidence summaries for problem framing, system modeling, verification, reliability, Agent leverage, and ownership.
 - Cognitive-coverage, delegation-calibration, and real-user or production feedback guidance for consequential work.
 - Progressive personalization that keeps profiles, on-demand article and document use, one-off structured-data analysis, and read-only exemplar-project comparison available through one-sentence or one-path inputs.
@@ -17,7 +17,13 @@ All notable user-facing changes to this project are documented here. The format 
 ### Changed
 
 - Unified user-facing modes as `auto`, `focus`, `deep`, and `off`: `focus` explicitly locks one capability goal, `deep` is explicit full-intensity learning with task quality first, and `off` never adds a learning tail. Legacy `ship`/`incident` inputs normalize to `auto`, while `coach` normalizes to `focus`.
-- Added a fast path for mechanical, explicit delivery-only, and urgent recovery work, and clarified that one learning seam never limits engineering review or verification coverage.
+- Reframed the fast path as a learning-overlay bypass after lightweight detection, so it never replaces the host Agent's native planning, tools, risk analysis, or verification and can be reconsidered when material evidence changes.
+- Added a capability-monotonicity contract: the Skill may add learning support but must not narrow current or future host reasoning, tool choice, engineering coverage, validation, or useful autonomy.
+- Made coupling, boundary, runtime, concurrency, capacity, compatibility, and recovery checks conditional, non-exhaustive risk examples rather than a mandatory checklist or ceiling on stronger future Agents.
+- Removed fixed per-task question, learning-seam, checkpoint, and takeaway limits from the adaptive controller; attention is protected by keeping guidance coherent and loading detailed state or references only when they can change the task.
+- Strengthened explicit `deep` into adaptive progressive practice: it can use one dense exchange or multiple evidence-driven turns to build a decision framework, explore trade-offs and failures, review Agent output, correct against evidence, and transfer the model without any preset round count.
+- Added an adaptive decision-debrief contract: after meaningful user judgments, the Agent fairly reconstructs the reasoning, evaluates only relevant dimensions, gives an evidence-bounded independent recommendation, and distills transferable rules without fixed scorecards or mandatory ceremony.
+- Expanded optional personalization with a compact representative-project context covering rough scale, complexity, and actual ownership; title and years calibrate guidance but never count as capability evidence or require a resume.
 - Tightened optional implicit routing so only `auto` may be inferred; `focus` and `deep` require an explicit current-task request or an explicitly saved default.
 - Replaced dry manual first-run steps with one compact optional profile conversation followed by a single tutorial offer; default `auto` still requires no mode choice.
 - Expanded installer receipts with installed runtime/onboarding paths and machine-ready version, mode, status, setup, doctor, uninstall, upgrade, and rollback commands.

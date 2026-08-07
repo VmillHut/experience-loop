@@ -1,6 +1,6 @@
 # Capability compass
 
-Use this reference when choosing the one capability worth strengthening in a task, interpreting ledger evidence, preserving fundamentals, or discussing longer-term growth.
+Use this reference when choosing a primary capability thread for the current evidence, interpreting ledger history, preserving fundamentals, or discussing longer-term growth.
 
 ## Principle
 
@@ -8,7 +8,7 @@ Optimize for increasingly independent judgment under real constraints, not for g
 
 Keep the compass internal during ordinary work. The user should not need to choose categories or maintain a skill matrix.
 
-Selecting one direction limits only the learning seam and ledger label. It must never narrow engineering inspection, testing, security review, reliability work, or acceptance coverage. A task may require many engineering concerns while highlighting only one reusable human judgment.
+Keep one primary direction in working attention at a time so guidance stays coherent; this is not a global task quota. It limits only learning emphasis and ledger labels, never engineering inspection, testing, security review, reliability work, or acceptance coverage. New evidence may justify changing the primary direction.
 
 ## Six directions
 
@@ -53,11 +53,11 @@ Prefer this direction when local implementation is not enough and someone must c
 For each non-trivial task:
 
 1. Identify the judgment that most affects correctness, user value, safety, or recovery.
-2. Map it to one direction; do not split attention across all six.
+2. Map it to one primary direction for now; do not split working attention across all six, and revise when material evidence changes.
 3. Prefer a direction that recurs in the user's responsibilities or domains when an authorized profile makes that relevant.
 4. Use prior ledger evidence only as a tie-breaker. One missing category is not automatically a gap.
 5. Prefer a chance for stronger evidence—independent prediction, correction, verification, or transfer—over another explanation.
-6. In `auto`, skip capability work when no durable judgment exists or interruption cost exceeds concrete current or future value.
+6. In `auto`, omit the learning overlay when no durable judgment exists or its total cost exceeds concrete current or future value. Do not treat minimal intervention as the goal.
 
 Do not announce the selected direction unless it helps the user review the result or they asked for a growth explanation.
 

@@ -106,6 +106,10 @@ def _parser() -> argparse.ArgumentParser:
     setup.add_argument("--name")
     setup.add_argument("--role")
     setup.add_argument("--experience-level", help="经验阶段，例如 junior、1-3 years 或 senior")
+    setup.add_argument(
+        "--experience-context",
+        help="代表性项目的规模、复杂度和本人实际承担部分；无需项目名或敏感指标",
+    )
     setup.add_argument("--responsibility", action="append", default=[])
     setup.add_argument("--domain", action="append", default=[])
     setup.add_argument("--goal", action="append", default=[])
@@ -138,6 +142,8 @@ def _parser() -> argparse.ArgumentParser:
     profile_update.add_argument("--reset-role", action="store_true")
     profile_update.add_argument("--experience-level")
     profile_update.add_argument("--clear-experience-level", action="store_true")
+    profile_update.add_argument("--experience-context")
+    profile_update.add_argument("--clear-experience-context", action="store_true")
     profile_update.add_argument("--responsibility", action="append")
     profile_update.add_argument("--replace-responsibilities", action="store_true")
     profile_update.add_argument("--clear-responsibilities", action="store_true")
@@ -658,6 +664,7 @@ def _dispatch(namespace: argparse.Namespace, store: Store) -> Dict[str, Any]:
             name=namespace.name,
             role=namespace.role,
             experience_level=namespace.experience_level,
+            experience_context=namespace.experience_context,
             responsibilities=namespace.responsibility,
             domains=namespace.domain,
             goals=namespace.goal,
@@ -703,6 +710,8 @@ def _dispatch(namespace: argparse.Namespace, store: Store) -> Dict[str, Any]:
             reset_role=namespace.reset_role,
             experience_level=namespace.experience_level,
             clear_experience_level=namespace.clear_experience_level,
+            experience_context=namespace.experience_context,
+            clear_experience_context=namespace.clear_experience_context,
             responsibilities=namespace.responsibility,
             replace_responsibilities=namespace.replace_responsibilities,
             clear_responsibilities=namespace.clear_responsibilities,

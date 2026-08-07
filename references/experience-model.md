@@ -52,7 +52,7 @@ Keep the ledger append-only. An event should identify only what the evidence sup
 - confidence and reason;
 - links to later corrections or transfer events.
 
-Use a strict recording budget: `auto` records only consequential evidence with durable reuse value; `focus` or `deep` records at most one or two useful events after healthy delivery; `off` records nothing. Auxiliary ledger failure must not change the task result.
+Use a strict relevance budget rather than a numeric quota: record the smallest coherent set of consequential evidence with durable reuse value after healthy delivery; `off` records nothing. Auxiliary ledger failure must not change the task result.
 
 Record references to source material or project artifacts, not large copies of them. Omit the capability direction when the mapping is ambiguous; do not force every event into a taxonomy.
 

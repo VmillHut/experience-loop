@@ -10,7 +10,7 @@ Use this reference for profile persistence, workspace discovery, external state,
 - [Personal profile](#personal-profile)
 - [Progressive personalization and extensions](#progressive-personalization-and-extensions)
 - [Project profile](#project-profile)
-- [Mode and adaptive interruption](#mode-and-adaptive-interruption)
+- [Mode persistence and personalization boundaries](#mode-persistence-and-personalization-boundaries)
 - [Optional global Agent router](#optional-global-agent-router)
 - [Portability and backups](#portability-and-backups)
 - [Repair and reset](#repair-and-reset)
@@ -21,8 +21,8 @@ Keep setup concrete but optional. After installation, offer one compact profile 
 
 Offer only information that can materially change behavior:
 
-1. Role and experience stage.
-2. Current responsibilities and domains or project types.
+1. Current role or position, plus approximate years or experience stage.
+2. Current responsibilities and domains or project types, with an optional compact account of representative project scale, complexity, and actual ownership.
 3. Near-term goals and active learning directions.
 4. Preferred explanation style.
 5. Guidance preference such as low interruption or willingness to predict first.
@@ -82,6 +82,7 @@ Do not assume every runtime version uses exactly these filenames. Use its comman
 Record stable preferences, not a personality verdict. Useful fields include:
 
 - role and experience range;
+- representative project scale, complexity, and actual ownership;
 - responsibilities and technical or business domains;
 - near-term goals and active learning directions;
 - explanation style, guidance preference, and delivery context;
@@ -89,6 +90,8 @@ Record stable preferences, not a personality verdict. Useful fields include:
 - privacy boundary and schema version.
 
 Treat inferred strengths and gaps as hypotheses with confidence, evidence references, and last-updated timestamps. Never label the user from a single task.
+
+Treat title, years, team size, traffic, and project difficulty as calibration context, not capability evidence. Prefer what the user actually owned and later demonstrated over prestige or scale. Use this context to choose terminology, prerequisite depth, scaffolding, and relevant judgment seams; never use it to lower engineering coverage or assume that a senior title proves mastery.
 
 Do not require the user to curate a capability matrix. Use ledger evidence and the current project to select one capability direction internally. Missing evidence is not proof of a gap.
 
@@ -107,7 +110,7 @@ Keep advanced capability available through progressively disclosed inputs:
 | User provides | Agent handles | Do not require |
 | --- | --- | --- |
 | nothing beyond the task | default `auto`, task framing, adaptive control | completed profile or mode choice |
-| one sentence about role, responsibility, domain, goal, explanation, guidance preference, or delivery context | update only the relevant profile fields | a complete personal profile |
+| one sentence about role, experience, representative project scope or ownership, responsibility, domain, goal, explanation, guidance preference, or delivery context | update only the relevant profile fields | a complete personal profile or resume |
 | current project path plus a request to remember it | read-only scan, project identity, commands, boundaries, learning opportunities | manual project metadata |
 | article, book, notes, or supported document path plus optional intent | one-off reading or, when reuse justifies it, Knowledge Lens ingestion, citation index, binding, and later retrieval | tags, chunk settings, or a folder taxonomy |
 | CSV, JSON, table, or another structured dataset | one-off analysis with the appropriate data tool; persist only through a format the runtime actually supports | pretending every dataset is a Knowledge Lens source |
@@ -134,16 +137,17 @@ Prefer a targeted scan. Skip dependency caches, build outputs, generated artifac
 
 Refresh stale or contradicted fields from current source. Project profiles are navigation aids, not authority.
 
-## Mode and adaptive interruption
+## Mode persistence and personalization boundaries
 
-Let current task evidence control the behavior. Treat natural-language `focus` or `deep` requests as task-scoped unless the user explicitly asks to save that mode as the default:
+The controller lives in [SKILL.md](../SKILL.md), with non-exhaustive decision guidance in [workflow.md](workflow.md). Do not copy or redefine that controller in profile storage, host prompts, or routers.
 
-- `auto`: intelligently choose silence, embedded guidance, an optional checkpoint, a required judgment checkpoint, or a short guided practice loop from expected benefit versus interruption cost; it may briefly wait when participation itself is valuable and safe;
-- `focus`: the user explicitly locks one capability goal for the task, normally with one or two purposeful checkpoints;
-- `deep`: the user explicitly requests maximum useful depth, normally with two to four purposeful checkpoints, mental models, alternatives, failure cases, evidence, and transfer;
-- `off`: no content-bearing profile use, learning behavior, learning tail, or ledger writes.
+This reference governs persistence only:
 
-Within `auto`, infer pressure, consequence, uncertainty, reuse potential, profile relevance, prior engagement or skips, and interaction cost. Do not equate auto with low intervention: choose the intervention with the best expected net value, including required participation when justified. There is no fixed answer quota. The user can always say “skip,” “just do it,” or `off`. Never convert a local high-intensity choice into an implicit standing `focus` or `deep` contract.
+- `auto` is the default; `focus`, `deep`, and `off` are saved only by explicit user choice;
+- natural-language mode requests remain task-scoped unless the user asks to persist them;
+- a profile may rank already-safe learning candidates and adjust terminology, explanation, participation, or learning depth only after the task-quality plan is intact;
+- a profile must never change the host Agent's planning, tools, risk coverage, implementation, verification, recovery, or reporting of material findings;
+- explicit feedback is evidence for later decisions, not a permanent global rule inferred from one interaction.
 
 An explicitly saved `focus` or `deep` default remains a continuing user choice until changed; it is not inferred from complexity. Do not persist a one-off mode request silently.
 
@@ -167,7 +171,7 @@ Before writing:
 Keep the router short and avoid copying this Skill into the global prompt. A suitable intent is:
 
 ```text
-Use the locally installed experience-loop Skill for substantive programming work when it can improve engineering judgment without lowering task quality. In auto, intelligently choose whether and how strongly to guide, including a brief required judgment checkpoint when participation is high-value and safe; honor “off,” “delivery only,” and urgent recovery immediately, and never create focus or deep as a standing contract implicitly.
+Use the installed experience-loop Skill as a thin learning sidecar for substantive software work. Preserve the host Agent's native planning, tools, engineering coverage, and verification; let the Skill's current auto controller detect and decide instead of duplicating it here. Honor explicit off and delivery-only requests.
 ```
 
 Do not write a project-level router unless the user explicitly asks for team-wide behavior.

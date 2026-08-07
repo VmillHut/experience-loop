@@ -42,11 +42,14 @@ class RuntimeCliTests(unittest.TestCase):
             setup_help = run_cli(home, "setup", "--help")
             self.assertEqual(setup_help.returncode, 0, setup_help.stderr)
             self.assertIn("--guidance-preference", setup_help.stdout)
+            self.assertIn("--experience-context", setup_help.stdout)
 
             profile_help = run_cli(home, "profile", "update", "--help")
             self.assertEqual(profile_help.returncode, 0, profile_help.stderr)
             self.assertIn("--guidance-preference", profile_help.stdout)
             self.assertIn("--clear-guidance-preference", profile_help.stdout)
+            self.assertIn("--experience-context", profile_help.stdout)
+            self.assertIn("--clear-experience-context", profile_help.stdout)
 
     def test_setup_is_idempotent_and_preserves_custom_profile(self) -> None:
         with tempfile.TemporaryDirectory(prefix="experience-loop-runtime-") as raw:
@@ -62,6 +65,8 @@ class RuntimeCliTests(unittest.TestCase):
                 "backend-engineer",
                 "--experience-level",
                 "1-3 years",
+                "--experience-context",
+                "参与中等规模跨服务支付改造，负责方案设计、上线与故障复盘",
                 "--responsibility",
                 "支付链路, 发布质量",
                 "--responsibility",
@@ -91,6 +96,10 @@ class RuntimeCliTests(unittest.TestCase):
             self.assertEqual(profile["name"], "小林")
             self.assertEqual(profile["role"], "backend-engineer")
             self.assertEqual(profile["experience_level"], "1-3 years")
+            self.assertEqual(
+                profile["experience_context"],
+                "参与中等规模跨服务支付改造，负责方案设计、上线与故障复盘",
+            )
             self.assertEqual(profile["responsibilities"], ["支付链路", "发布质量"])
             self.assertEqual(profile["domains"], ["支付", "Unity 客户端"])
             self.assertEqual(profile["goals"], ["架构决策", "代码审查"])
@@ -128,6 +137,7 @@ class RuntimeCliTests(unittest.TestCase):
                 "name",
                 "role",
                 "experience_level",
+                "experience_context",
                 "responsibilities",
                 "domains",
                 "goals",
@@ -475,6 +485,8 @@ class RuntimeCliTests(unittest.TestCase):
                     "--replace-learning-focus",
                     "--experience-level",
                     "2 years",
+                    "--experience-context",
+                    "做过高可靠性订单链路改造，承担边界设计和灰度验收",
                     "--explanation-style",
                     "先给结论，再解释失效条件",
                     "--guidance-preference",
@@ -490,6 +502,10 @@ class RuntimeCliTests(unittest.TestCase):
             self.assertEqual(profile["goals"], ["架构决策"])
             self.assertEqual(profile["learning_focus"], ["代码审查", "故障诊断"])
             self.assertEqual(profile["experience_level"], "2 years")
+            self.assertEqual(
+                profile["experience_context"],
+                "做过高可靠性订单链路改造，承担边界设计和灰度验收",
+            )
             self.assertEqual(
                 profile["explanation_style"], "先给结论，再解释失效条件"
             )
@@ -511,6 +527,7 @@ class RuntimeCliTests(unittest.TestCase):
                     "--clear-goals",
                     "--clear-learning-focus",
                     "--clear-experience-level",
+                    "--clear-experience-context",
                     "--clear-explanation-style",
                     "--clear-guidance-preference",
                     "--clear-delivery-context",
@@ -521,6 +538,7 @@ class RuntimeCliTests(unittest.TestCase):
             self.assertEqual(cleared["profile"]["goals"], [])
             self.assertEqual(cleared["profile"]["learning_focus"], [])
             self.assertIsNone(cleared["profile"]["experience_level"])
+            self.assertIsNone(cleared["profile"]["experience_context"])
             self.assertIsNone(cleared["profile"]["explanation_style"])
             self.assertIsNone(cleared["profile"]["guidance_preference"])
             self.assertIsNone(cleared["profile"]["delivery_context"])
@@ -552,6 +570,11 @@ class RuntimeCliTests(unittest.TestCase):
                 ("--clear-goals", "--goal", "新目标"),
                 ("--clear-learning-focus", "--learning-focus", "新方向"),
                 (
+                    "--clear-experience-context",
+                    "--experience-context",
+                    "新的代表性项目经验",
+                ),
+                (
                     "--clear-guidance-preference",
                     "--guidance-preference",
                     "关键节点先让我判断",
@@ -570,6 +593,7 @@ class RuntimeCliTests(unittest.TestCase):
                 "domains",
                 "goals",
                 "learning_focus",
+                "experience_context",
                 "customized",
                 "updated_at",
             ):
@@ -584,6 +608,7 @@ class RuntimeCliTests(unittest.TestCase):
             added_fields = (
                 "responsibilities",
                 "domains",
+                "experience_context",
                 "explanation_style",
                 "guidance_preference",
                 "delivery_context",
@@ -597,6 +622,7 @@ class RuntimeCliTests(unittest.TestCase):
             shown = assert_ok(self, run_cli(home, "profile", "show"))["profile"]
             self.assertEqual(shown["responsibilities"], [])
             self.assertEqual(shown["domains"], [])
+            self.assertIsNone(shown["experience_context"])
             self.assertIsNone(shown["explanation_style"])
             self.assertIsNone(shown["guidance_preference"])
             self.assertIsNone(shown["delivery_context"])

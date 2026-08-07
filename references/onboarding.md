@@ -20,21 +20,21 @@ After confirming installation, ask all profile questions in one compact message.
 ```text
 Experience Loop 已安装。下面信息都可选，回答你愿意回答的部分即可，也可以直接回复“全部跳过”：
 
-1. 你的角色和大致经验阶段？
-2. 目前主要负责什么，常做哪些领域或项目类型？
+1. 你目前的岗位或角色，以及大致从业年限或经验阶段？
+2. 目前主要负责什么、常做哪些领域或项目类型？如果愿意，可补充一两个代表性项目的大致规模或复杂度，以及你实际负责的部分。
 3. 未来 3–12 个月最想提升什么，或希望承担什么更高层次的责任？
 4. 希望我怎样解释，例如先结论、偏原理还是偏示例？
 5. 希望我怎样介入，例如尽量少打断，还是高价值时可以让我先判断并短暂等我回答？
 6. 常见交付环境是什么，例如发布节奏、截止期、兼容性或可靠性要求？
 
-这些画像信息都不是必填，也可以以后在真实任务中用一句话补充或修改。
+这些画像信息都不是必填，也可以以后在真实任务中用一句话补充或修改。不需要写简历或提供公司名、项目名和敏感指标；项目规模与难度用大致描述即可，重点是你实际承担了什么。
 ```
 
 Do not add more questions unless an answer is ambiguous enough to prevent a correct profile write.
 
 ### Turn 2: persist only answered fields
 
-Map explicit answers to the runtime's `setup` fields. Store presentation preferences in `explanation_style` and interruption/participation preferences in `guidance_preference`; do not merge them. Repeated responsibilities, domains, goals, and learning directions may be passed more than once. If the user skips everything, run default `setup` with no optional profile arguments. Do not add a project path or content-access confirmation unless separately authorized. If the user explicitly supplied a custom runtime home, reuse that same `--home` (or the same `EXPERIENCE_LOOP_HOME`) for `setup`, follow-up `status`, and `doctor`; receipt commands do not remember a one-off `--home` value.
+Map explicit answers to the runtime's `setup` fields. Store approximate years or stage in `experience_level`, and a compact account of representative project scale, complexity, and actual ownership in `experience_context`; do not turn it into a resume. Store presentation preferences in `explanation_style` and interruption/participation preferences in `guidance_preference`; do not merge them. Repeated responsibilities, domains, goals, and learning directions may be passed more than once. If the user skips everything, run default `setup` with no optional profile arguments. Do not add a project path or content-access confirmation unless separately authorized. If the user explicitly supplied a custom runtime home, reuse that same `--home` (or the same `EXPERIENCE_LOOP_HOME`) for `setup`, follow-up `status`, and `doctor`; receipt commands do not remember a one-off `--home` value.
 
 After a successful write, summarize only the saved fields and the external data location. Then ask exactly one decision:
 
@@ -42,7 +42,7 @@ After a successful write, summarize only the saved fields and the external data 
 初始化完成。要不要现在看一个约 2 分钟的对话式使用教学？回复“要”或“跳过”即可。
 ```
 
-If the user skips, finish with: “以后直接给我真实任务即可；默认 `auto` 会自己决定什么时候不打扰、什么时候解释、什么时候请你先做判断。你随时可以说 `focus`、`deep`、`off` 或‘跳过，直接做’。”
+If the user skips, finish with: “以后直接给我真实任务即可；默认 `auto` 会自动检测任务风险和能力机会，再智能决定是否介入、何时解释或请你先做判断。你随时可以说 `focus`、`deep`、`off` 或‘跳过，直接做’。”
 
 ## Fixed short tutorial
 
@@ -69,13 +69,13 @@ Then explain the effect in one paragraph: `auto` did not merely explain after th
 
 ### Stage 2: explain all four modes
 
-Use this compact mapping:
+Use this compact mapping. The four modes are the user contract; the listed `auto` responses are examples, not a closed capability menu:
 
 | Mode | Who controls learning intensity | What the user experiences |
 | --- | --- | --- |
-| `auto` | Agent decides at each useful seam | May stay silent, explain inline, ask an optional checkpoint, briefly use a required judgment checkpoint, or run a short guided practice loop; no fixed answer quota |
+| `auto` | Agent detects automatically and decides intelligently as evidence changes | May stay silent, explain inline, ask an optional checkpoint, briefly use a required judgment checkpoint, or run a short guided practice loop; no fixed answer quota |
 | `focus` | User names one capability goal | The task centers one bounded practice goal with purposeful prediction, trade-off, or review points |
-| `deep` | User explicitly opens full learning depth | Rich mental models, alternatives, failure cases, evidence comparison, and transfer practice; more dialogue and time |
+| `deep` | User explicitly opens full learning depth | Proactively exercises real task decisions and Agent-output review, objectively debriefs the user's reasoning, corrects a framework against evidence, and adapts current-host methods and rounds to that outcome rather than a fixed recipe |
 | `off` | User disables the learning layer | Normal task execution and verification with no learning prompts, profile use, learning tail, or event recording |
 
 State that task quality, verification, safety, and useful Agent execution remain the floor in every mode. `auto` can be locally intensive, but it does not silently create a persistent `focus` goal or an open-ended `deep` session.
@@ -102,5 +102,5 @@ Clarify in one sentence that profile updates need only natural language, documen
 End without another setup choice:
 
 ```text
-教学完成。现在直接给我一个真实任务即可；默认 `auto` 会根据任务、风险、时间压力和你的画像，自行决定何时帮助你练习、何时保持安静。
+教学完成。现在直接给我一个真实任务即可；默认 `auto` 会自动检测任务风险和能力机会，再根据证据、时间压力和你的画像智能决定是否介入以及介入多深。
 ```

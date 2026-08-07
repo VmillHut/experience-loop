@@ -3,7 +3,7 @@ interface:
   short_description: "Adaptive engineering growth without lowering task quality"
   icon_small: "./assets/icon-small.svg"
   icon_large: "./assets/icon-large.svg"
-  default_prompt: "Use $experience-loop with task quality first. Honor an explicitly saved mode; otherwise let auto intelligently choose silence, embedded guidance, an optional checkpoint, a required judgment checkpoint, or a short guided practice loop by expected net user value. A required checkpoint may briefly wait only when participation is valuable and safe; immediately honor skip, just-do-it, urgent recovery, or off. Never infer a standing focus or deep contract from complexity."
+  default_prompt: "Use $experience-loop as a thin learning sidecar for substantive software work. Preserve the host Agent's native planning, tools, engineering coverage, and verification; let the Skill's current auto controller detect and decide instead of duplicating it here. Honor explicit off and delivery-only requests."
 
 policy:
   allow_implicit_invocation: true

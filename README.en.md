@@ -2,7 +2,7 @@
   <img src="assets/icon-large.svg" alt="Experience Loop" width="620">
 
   <p><strong>You can delegate the code. Do not outsource your judgment with it.</strong></p>
-  <p>Experience Loop lets the Agent decide when to stay quiet, when to explain, and when to ask you to make the judgment first—so real work still ships at full quality while the important experience stays with you.</p>
+  <p>Experience Loop lets the Agent detect risks and capability opportunities as evidence changes, then intelligently decide whether, when, and how strongly to intervene—without taking over or weakening the Agent's native planning, tools, or verification.</p>
 
   <p>
     <a href="https://github.com/VmillHut/experience-loop/actions/workflows/ci.yml"><img src="https://github.com/VmillHut/experience-loop/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
@@ -14,7 +14,7 @@
 
   <p>
     <a href="#installation"><strong>Let AI install it</strong></a> ·
-    <a href="#auto-is-not-the-weak-mode">Understand auto</a> ·
+    <a href="#autos-core-automatic-detection-and-intelligent-decisions">Understand auto</a> ·
     <a href="#why-all-four-modes-exist">See every mode</a> ·
     <a href="#personalization-sources-data-and-exemplar-projects-are-still-here">Explore extensions</a> ·
     <a href="README.md">简体中文</a>
@@ -38,7 +38,7 @@ AI will keep getting better at generating code. The scarcer part of a developer'
 - decide what belongs with an Agent, what belongs in automation, and what still requires human ownership;
 - take responsibility for reliability, trade-offs, production outcomes, and long-term evolution.
 
-Experience Loop does not turn real work into a course, and it does not make you hand-write work an Agent can safely perform. It intervenes only at valuable judgment seams, creating a loop of **prediction or decision → Agent execution and investigation → comparison with evidence → correction and transfer**, while preserving correctness, validation, safety, and delivery speed.
+Experience Loop does not turn real work into a course, and it does not make you hand-write work an Agent can safely perform. It reuses the Agent's native task process and adds **prediction or decision → execution and investigation → comparison with evidence → correction and transfer** only at valuable judgment seams, while preserving correctness, validation, safety, and delivery speed.
 
 ## Installation
 
@@ -64,14 +64,14 @@ After installation, the Agent starts one fixed, short conversational flow.
 
 It asks for these concrete details in one compact prompt:
 
-1. your role and approximate experience stage;
-2. your current responsibilities and common domains or project types;
+1. your current role or position, plus approximate years or experience stage;
+2. your current responsibilities and common domains or project types, optionally including the rough scale or complexity of one or two representative projects and what you actually owned;
 3. the capability or higher level of responsibility you want to grow into over the next 3–12 months;
 4. how you prefer explanations—for example, conclusion first, mechanism first, or examples first;
 5. how you prefer intervention—for example, minimal interruption or a chance to judge first at high-value seams;
 6. your usual delivery environment, including release cadence, deadlines, compatibility, and reliability expectations.
 
-Every profile field is optional. You may answer any subset or say “skip all.” The Agent stores only what you actually provide, does not invent missing information, and does not casually scan projects or read source material. The default mode is `auto`; onboarding does not force you to choose a mode first.
+Every profile field is optional. You may answer any subset or say “skip all”; no resume, company name, project name, or sensitive metric is required. The Agent stores only what you actually provide, does not invent missing information, and does not casually scan projects or read source material. The default mode is `auto`; onboarding does not force you to choose a mode first.
 
 Then it asks one question:
 
@@ -83,17 +83,18 @@ If you choose the tutorial, the Agent uses one fixed, small incident scenario to
 
 Upgrading an existing installation does not repeat the profile questions or tutorial unless you explicitly request onboarding or the tutorial again.
 
-## `auto` is not the weak mode
+## `auto`'s core: automatic detection and intelligent decisions
 
-“Automatic” means the Agent automatically decides:
+The core of `auto` is not low intervention. It is **automatic detection + intelligent decisions**: as the task and evidence evolve, the Agent actively detects which engineering risks are activated, which judgments should remain with the human, and where a real capability opportunity exists, then decides whether, when, and how strongly to intervene.
 
+- which boundary, coupling, runtime, concurrency, capacity, compatibility, or recovery risks the change activates;
 - whether this task contains a judgment worth keeping with the human;
 - where in the task that intervention belongs;
 - whether to stay quiet, explain in context, or require real participation;
 - whether one question is enough or a short guided practice loop is justified;
 - when delivery pressure should stop all learning-oriented interruption.
 
-There is no preset of “zero required learning answers” and no fixed ceiling of “at most N skippable checkpoints.” Based on consequence, uncertainty, transfer value, your responsibilities and profile, time pressure, and interaction cost, `auto` can choose among five responses:
+There is no preset of “zero required learning answers” and no fixed ceiling of “at most N skippable checkpoints.” Based on consequence, uncertainty, transfer value, your responsibilities and profile, time pressure, and interaction cost, the following are common `auto` responses—not a closed menu that limits future Agents:
 
 1. **Silent execution**: no learning layer for mechanical work, simple facts, urgent delivery, or a task with no transferable judgment.
 2. **Embedded explanation**: no interruption; the Agent names one important mechanism, evidence boundary, or failure condition while executing or handing off.
@@ -101,7 +102,7 @@ There is no preset of “zero required learning answers” and no fixed ceiling 
 4. **Required judgment checkpoint**: when judging first is itself the valuable practice, the decisive evidence can wait, and waiting will not harm delivery, the Agent pauses for your answer.
 5. **Short guided practice loop**: around one real capability seam, the Agent runs prediction, investigation, evidence comparison, correction, and one useful transfer exercise.
 
-`auto` does not default to the lightest option. It chooses the intervention with the highest expected net user value, preferring the less disruptive option only when the expected value is otherwise comparable.
+`auto` does not default to low intervention; silence is only one possible intelligent result. It chooses the intervention with the highest expected net user value, preferring the less disruptive option only when the expected value is otherwise comparable.
 
 “Required” does not remove user control. It means the Agent waits by default instead of asking a decorative question and immediately answering it. You can always say “skip,” “just do it,” “delivery only,” or switch to `off`; the Agent must continue immediately without punishment or repeated pressure.
 
@@ -113,9 +114,9 @@ This means `auto` can use full force at one high-value seam, but it will not sil
 
 | Mode | Who controls the intensity | What you actually experience | When to use it | Can it wait for an answer? |
 | --- | --- | --- | --- | --- |
-| `auto` | The Agent adapts from current evidence | It may stay completely quiet, explain, ask an optional question, wait for one key judgment, or run a short practice loop | Almost all day-to-day development; the default | Yes, but only when valuable and safe; you can always skip |
+| `auto` | The Agent detects automatically and decides intelligently from current evidence | It may stay completely quiet, explain, ask an optional question, wait for one key judgment, or run a short practice loop | Almost all day-to-day development; the default | Yes, but only when valuable and safe; you can always skip |
 | `focus` | You lock one capability goal | Bounded predictions, trade-offs, reviews, and reflection around the same goal while the Agent still implements and validates | Deliberate practice in root-cause analysis, test design, architecture trade-offs, Agent review, and similar skills | Usually; the goal and rhythm are more predictable than `auto` |
-| `deep` | You explicitly authorize full depth | A complete mental model, alternatives, costs, failure conditions, evidence comparison, correction, and transfer | Deep debugging, important architecture work, or a substantial growth review | Yes; it spends more dialogue and time without sacrificing delivery quality |
+| `deep` | You explicitly authorize full depth | The Agent proactively uses real task seams so you model, predict, choose, and review, then correct and transfer the framework from evidence | Deep debugging, important architecture work, or a substantial growth review | More proactive and deeper than `auto`, while methods and rounds follow real value rather than a fixed recipe or lower quality |
 | `off` | You disable the learning layer | Normal analysis, edits, and validation without reading learning-profile content, asking learning questions, appending learning summaries, or recording learning events | Delivery-only work, sensitive contexts, or any time learning support is unwanted | No |
 
 Switch modes with ordinary language; no reconfiguration is needed:
@@ -132,7 +133,7 @@ A one-time switch affects only the current task. It is persisted only when you e
 
 ## What real use looks like
 
-### Routine change: `auto` can stay out of the way
+### Routine change: `auto` detects first, then decides whether to intervene
 
 ```text
 Implement this cache invalidation requirement. It needs to reach QA this week.
@@ -166,6 +167,12 @@ Use focus for this task. I want to practice test design, so let me choose the sm
 Use deep to analyze this state-synchronization design. Build the full mental model, compare options, costs, failure conditions, and validation evidence before changing code.
 ```
 
+`auto` first decides whether capability practice is worthwhile; choosing `deep` authorizes the Agent to pursue it proactively. `deep` is neither a longer explanation nor a teaching checklist. It actively uses the best real task seams so you define constraints, invariants, and ownership; compare alternatives and second-order effects; predict failures and falsifying evidence; review the Agent's design, code, tests, or rollout; and correct your judgment from evidence. The Agent may choose, merge, reorder, repeat, or skip questions, counterexamples, simulations, visualizations, reviews, or stronger future interactions. There is no preset round count. Proactive does not mean dumping the whole question map at once: each exchange uses the smallest coherent set that advances the current model, then re-decides from the answer and new evidence. If a viable seam exists but the Agent only gives you a longer answer without letting you decide or review, `deep` has missed its purpose.
+
+After you make a decision or finish a review, the Skill does not merely mark it right or wrong—or echo your conclusion. At a worthwhile debrief seam, the Agent first reconstructs your constraints and reasoning, then selects only the dimensions relevant to the real task, gives an independent view of strengths, gaps, evidence, confidence, conditions, and alternatives, and separates facts, inferences, and unknowns. It then extracts a transferable decision rule. It asks you to restate or apply that rule to a changed scenario only when active recall adds value, rather than turning every decision into a fixed scorecard.
+
+Decision debriefs are not exclusive to `deep`. `auto` detects whether one is worthwhile and intelligently chooses its timing and depth; when the evidence warrants it, `auto` can also be highly proactive. The distinction is that `deep` already carries the user's authorization to seek and continue high-value debrief seams until another exchange no longer adds enough value. Neither mode optimizes for fewer interruptions or more rounds by itself.
+
 ### Incidents and deadlines: restore first
 
 ```text
@@ -181,10 +188,10 @@ Low usage cost does not mean removing choice. It means exposing choice through o
 ### Adjust your profile in one sentence
 
 ```text
-Remember: I mainly own the payment path and want to strengthen reliability and cross-team acceptance judgment. Lead with conclusions, and let me predict first at high-value seams.
+Remember: I have about four years of backend experience and currently own the payment path. I have worked on a cross-service change, mainly owning its design and rollout acceptance. I want to strengthen reliability judgment; lead with conclusions and let me predict first at high-value seams.
 ```
 
-The Agent updates only the fields addressed by that sentence. A profile can influence which judgment seam is selected, what language is used, how an explanation is framed, and when interruption is worthwhile. It cannot lower engineering standards, narrow validation coverage, or force you into a course.
+The Agent updates only the fields addressed by that sentence. Years, title, and project scale are calibration context for terminology, scaffolding, and practice selection—not proof of capability; actual ownership and later task evidence matter more. A profile cannot lower engineering standards, narrow validation coverage, or force you into a course.
 
 ### Use an article, book, or document for one task
 
@@ -212,17 +219,19 @@ The exemplar remains separate from the active project. The Agent compares mechan
 
 ## How it avoids dragging the Agent down
 
-The goal is not “teach more.” It is positive net value:
+The governing rule is capability monotonicity: enabling the Skill may preserve or improve the Agent's task capability, never reduce it. In practice:
 
-- a learning goal may constrain teaching intervention, but never the architecture, security, compatibility, reliability, or test coverage the Agent should inspect;
+- the Skill adds a learning sidecar; it does not create another planner, risk engine, tool selector, or verification loop, and stronger capabilities from future host updates take precedence;
+- modes, learning goals, and profiles may affect learning candidates, explanation, and participation only after the task-quality plan is intact; they never change implementation, tools, architecture, security, compatibility, reliability, recovery, tests, or material-risk reporting;
 - it does not force hand-coding, manufacture difficulty, or reduce useful Agent work for the sake of practice;
 - it does not hide safety-critical, delivery-critical, or incident-recovery evidence;
 - profiles, sources, experience records, and project scans stay off the delivery-critical path, so an auxiliary failure cannot turn a successful task into a failed task;
-- mechanical work, simple facts, urgent recovery, explicit “delivery only,” and `off` use the fast path;
-- high-risk work strengthens evidence, acceptance, rollback, and review instead of treating complexity itself as a reason to teach;
+- risk categories, verification methods, and intervention forms are non-exhaustive examples rather than a fixed ceiling on future Agents;
+- mechanical work, urgent recovery, explicit “delivery only,” and `off` bypass only the learning overlay, never the native task-quality floor; new evidence can make `auto` decide again;
+- `auto` has no fixed question, learning-seam, or explanation quota; it may stay quiet or use full local intensity when valuable;
 - only verifiable predictions, decisions, corrections, real outcomes, and later transfer count as capability evidence—longer conversations and successful code generation do not.
 
-No adaptive system can guarantee a perfect intervention every time. You can calibrate it directly with “interrupt less,” “wait for me only at high-value seams,” “skip,” or `off`; `auto` treats that real feedback as a cost signal for later decisions.
+No adaptive system can guarantee a perfect decision every time, but one response is not frozen into a permanent rule. You can calibrate it in natural language; `auto` treats feedback as one piece of later evidence rather than letting “interrupt less” or any single preference outrank task quality.
 
 ## Data and privacy
 
@@ -262,5 +271,5 @@ Its job is simpler to state and harder to do: preserve the few judgments that sh
 ---
 
 <div align="center">
-  <p><strong>By default, let the Agent decide when to help you grow: full force when it matters, quiet execution when it does not.</strong></p>
+  <p><strong>Detect automatically, decide intelligently: strengthen human judgment without limiting Agent intelligence.</strong></p>
 </div>
