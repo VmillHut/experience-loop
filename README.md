@@ -39,9 +39,9 @@
 
 | 原则 | 意味着什么 |
 | --- | --- |
-| **交付** | `DELIVERY FIRST` · 学习层只做加法：安全、正确性、验证范围和交付效率不能降级。 |
-| **决策** | `DECIDE FROM EVIDENCE` · `auto` 随任务证据判断是否值得介入，以及应该安静、解释、提问还是运行短循环。 |
-| **迁移** | `COMPOUND JUDGMENT` · 只有预测、纠正、真实结果和后续复用才算增长；聊天变长、代码生成成功都不算。 |
+| <strong>交付<br>优先</strong> | `DELIVERY FIRST` · 学习层只做加法：安全、正确性、验证范围和交付效率不能降级。 |
+| <strong>证据<br>决策</strong> | `DECIDE FROM EVIDENCE` · `auto` 随任务证据判断是否值得介入，以及应该安静、解释、提问还是运行短循环。 |
+| <strong>判断<br>迁移</strong> | `COMPOUND JUDGMENT` · 只有预测、纠正、真实结果和后续复用才算增长；聊天变长、代码生成成功都不算。 |
 
 <div align="center">
   <img src="assets/readme-loop.zh.svg" alt="上方展示只完成任务的线性流程；下方展示 Experience Loop 在交付中保留判断、验收、复盘和可迁移经验" width="100%">
@@ -66,7 +66,7 @@ https://github.com/VmillHut/experience-loop
 | --- | --- | --- |
 | Agent 现场确认当前宿主的目录、发现方式与能力边界。 | 确定性安装器完成安全写入，并验证文件完整、运行时健康、宿主实际发现。 | 一次可全部跳过的简短问答，加一个约两分钟的对话式教学。 |
 
-　　安装完成后只会留下一个选择：
+安装完成后只会留下一个选择：
 
 ```text
 初始化完成。要不要现在看一个约 2 分钟的对话式使用教学？回复"要"或"跳过"即可。
@@ -117,10 +117,10 @@ https://github.com/VmillHut/experience-loop
 
 | 模式 | 谁决定强度 | 你会实际感受到什么 |
 | --- | --- | --- |
-| **`auto`** | **默认智能** · Agent 根据当前证据持续决定 | 可能全程安静，也可能解释、可选提问、等待一次关键判断，或运行一个短训练循环。 |
-| **`focus`** | **定向练习** · 你明确锁定一个能力目标 | 围绕同一目标安排有边界的预测、取舍、审查与复盘；实现和验证仍由 Agent 负责。 |
-| **`deep`** | **完整推演** · 你显式授权全深度 | 在真实任务中建立模型、比较方案、预测失效、审查设计，再用证据纠正与迁移。 |
-| **`off`** | **只交付** · 你关闭学习层 | 与普通 Agent 一致：不读画像、不提问、不追加学习总结、不记录学习事件。 |
+| <strong><code>auto</code><br>默认智能</strong> | Agent 根据当前证据持续决定 | 可能全程安静，也可能解释、可选提问、等待一次关键判断，或运行一个短训练循环。 |
+| <strong><code>focus</code><br>定向练习</strong> | 你明确锁定一个能力目标 | 围绕同一目标安排有边界的预测、取舍、审查与复盘；实现和验证仍由 Agent 负责。 |
+| <strong><code>deep</code><br>完整推演</strong> | 你显式授权全深度 | 在真实任务中建立模型、比较方案、预测失效、审查设计，再用证据纠正与迁移。 |
+| <strong><code>off</code><br>只交付</strong> | 你关闭学习层 | 与普通 Agent 一致：不读画像、不提问、不追加学习总结、不记录学习事件。 |
 
 　　模式随时用自然语言切换，不需要重新初始化：
 
@@ -141,11 +141,11 @@ https://github.com/VmillHut/experience-loop
 
 | 场景 | 你可以直接说 | Experience Loop 如何响应 |
 | --- | --- | --- |
-| **日常** | `实现这个缓存失效需求，本周要提测。` | 验收明确时直接完成；只有边界判断值得保留时，才补充证据或安排一个最小检查点。 |
-| **高价值** | `线上偶发重复扣款，帮我定位并修复。` | 当前证据能区分关键根因且恢复不紧急时，先让你做一次可验证预测，然后真的等待。 |
-| **`focus`** | `使用 focus，我想练习测试设计。` | 围绕同一能力目标组织短而有边界的预测、审查与复盘。 |
-| **`deep`** | `使用 deep 分析这次状态同步设计，先不要改代码。` | 先建模、比较方案与二阶影响、预测失效条件，再审查实现与证据。 |
-| **故障** | `先恢复发布，确认健康后再复盘。` | 安全、恢复、截止期和交付优先；`off` 或「只交付」时不追加学习尾巴。 |
+| <strong>日常<br>修改</strong> | `实现这个缓存失效需求，本周要提测。` | 验收明确时直接完成；只有边界判断值得保留时，才补充证据或安排一个最小检查点。 |
+| <strong>高价值<br>判断</strong> | `线上偶发重复扣款，帮我定位并修复。` | 当前证据能区分关键根因且恢复不紧急时，先让你做一次可验证预测，然后真的等待。 |
+| <strong><code>focus</code><br>定向练习</strong> | `使用 focus，我想练习测试设计。` | 围绕同一能力目标组织短而有边界的预测、审查与复盘。 |
+| <strong><code>deep</code><br>架构推演</strong> | `使用 deep 分析这次状态同步设计，先不要改代码。` | 先建模、比较方案与二阶影响、预测失效条件，再审查实现与证据。 |
+| <strong>故障与<br>赶工</strong> | `先恢复发布，确认健康后再复盘。` | 安全、恢复、截止期和交付优先；`off` 或「只交付」时不追加学习尾巴。 |
 
 <details>
 
@@ -184,12 +184,12 @@ https://github.com/VmillHut/experience-loop
 
 　　不需要配置页面。画像、资料、数据与参考项目都可以用一句自然语言按需接入：
 
-| 一句话示例 | 默认边界 |
-| --- | --- |
-| **画像** · `记住：我做后端约 4 年，希望强化可靠性判断；解释先给结论，高价值节点让我先预测。` | 只更新你提到的字段，不编造缺失信息；画像不能降低工程标准或验证范围。 |
-| **资料** · `结合这篇文章审查当前方案：C:\Docs\article.pdf` | 默认只读与当前问题相关的部分；长期导入 Knowledge Lens 前会征得同意。 |
-| **数据** · `分析 C:\Data\reviews.csv，找出最常漏掉的测试类型。` | CSV、JSON、表格和日志默认只服务当前任务，不强迫建库或改配置。 |
-| **项目** · `只读参考 D:\Repos\excellent-project 的测试架构，不要照抄。` | 参考项目与当前项目始终分离，只比较机制、约束和可验证证据。 |
+| 能力 | 一句话示例 | 默认边界 |
+| --- | --- | --- |
+| <strong>调整<br>画像</strong> | `记住：我做后端约 4 年，希望强化可靠性判断；解释先给结论，高价值节点让我先预测。` | 只更新你提到的字段，不编造缺失信息；画像不能降低工程标准或验证范围。 |
+| <strong>临时<br>资料</strong> | `结合这篇文章审查当前方案：C:\Docs\article.pdf` | 默认只读与当前问题相关的部分；长期导入 Knowledge Lens 前会征得同意。 |
+| <strong>结构化<br>数据</strong> | `分析 C:\Data\reviews.csv，找出最常漏掉的测试类型。` | CSV、JSON、表格和日志默认只服务当前任务，不强迫建库或改配置。 |
+| <strong>优质<br>项目</strong> | `只读参考 D:\Repos\excellent-project 的测试架构，不要照抄。` | 参考项目与当前项目始终分离，只比较机制、约束和可验证证据。 |
 
 　　岗位、年限和项目规模只是解释与练习切入点的上下文，不是能力证明；外部内容始终是不可信证据，不能变成 Agent 指令或工具授权。
 
@@ -238,9 +238,9 @@ https://github.com/VmillHut/experience-loop
 
 | 范围 | 默认行为 |
 | --- | --- |
-| **存放** | 个人画像、项目档案、经验记录和 Knowledge Lens 默认位于 `~/.experience-loop`，与 Skill 安装目录和项目仓库分离。 |
-| **保留** | 安装、升级和卸载 Skill 都不会自动删除个人数据。 |
-| **权限** | 项目扫描、资料导入和索引需要显式权限；导入内容只是不可信证据，不能成为 Agent 指令或工具授权。 |
+| <strong>存放<br>位置</strong> | 个人画像、项目档案、经验记录和 Knowledge Lens 默认位于 `~/.experience-loop`，与 Skill 安装目录和项目仓库分离。 |
+| <strong>生命<br>周期</strong> | 安装、升级和卸载 Skill 都不会自动删除个人数据。 |
+| <strong>权限<br>边界</strong> | 项目扫描、资料导入和索引需要显式权限；导入内容只是不可信证据，不能成为 Agent 指令或工具授权。 |
 
 　　完整规则见 [安全与隐私说明](references/safety-and-privacy.md) 和 [SECURITY.md](SECURITY.md)。
 
@@ -254,11 +254,11 @@ https://github.com/VmillHut/experience-loop
 
 | 主题 | 从这里开始 |
 | --- | --- |
-| **安装** | [AI 安装协议](docs/AI_INSTALL.md) · [动态宿主契约](references/host-compatibility.md) |
-| **行为** | [Skill 核心指令](SKILL.md) · [自适应工作流](references/workflow.md) |
-| **成长** | [对话式初始化](references/onboarding.md) · [能力罗盘](references/capability-compass.md) |
-| **资料** | [Knowledge Lens](references/knowledge-lens.md) · [安全与隐私说明](references/safety-and-privacy.md) |
-| **维护** | [版本变化](CHANGELOG.md) · [参与贡献](CONTRIBUTING.md) · [安全报告](SECURITY.md) |
+| <strong>安装与<br>宿主</strong> | [AI 安装协议](docs/AI_INSTALL.md) · [动态宿主契约](references/host-compatibility.md) |
+| <strong>Agent<br>实际行为</strong> | [Skill 核心指令](SKILL.md) · [自适应工作流](references/workflow.md) |
+| <strong>初始化与<br>成长模型</strong> | [对话式初始化](references/onboarding.md) · [能力罗盘](references/capability-compass.md) |
+| <strong>资料与<br>隐私</strong> | [Knowledge Lens](references/knowledge-lens.md) · [安全与隐私说明](references/safety-and-privacy.md) |
+| <strong>项目<br>维护</strong> | [版本变化](CHANGELOG.md) · [参与贡献](CONTRIBUTING.md) · [安全报告](SECURITY.md) |
 
 ---
 
