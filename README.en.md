@@ -39,11 +39,9 @@
 
 It does not turn real work into a course or make you hand-write work an Agent can safely do. It adds only three things to the native workflow:
 
-| Principle | What it means |
-| --- | --- |
-| <strong>Protect<br>delivery</strong> | `DELIVERY FIRST` · The learning layer only adds. Safety, correctness, validation coverage, and delivery speed cannot be degraded. |
-| <strong>Decide from<br>evidence</strong> | `DECIDE FROM EVIDENCE` · `auto` watches live task evidence and chooses whether to stay quiet, explain, ask, or run a short loop. |
-| <strong>Transfer<br>judgment</strong> | `COMPOUND JUDGMENT` · Only predictions, corrections, real outcomes, and later reuse count as growth; longer conversations and successful code generation do not. |
+1. **Protect delivery** · `DELIVERY FIRST` — The learning layer only adds. Safety, correctness, validation coverage, and delivery speed cannot be degraded.
+2. **Decide from evidence** · `DECIDE FROM EVIDENCE` — `auto` watches live task evidence and chooses whether to stay quiet, explain, ask, or run a short loop.
+3. **Transfer judgment** · `COMPOUND JUDGMENT` — Only predictions, corrections, real outcomes, and later reuse count as growth; longer conversations and successful code generation do not.
 
 <div align="center">
   <img src="assets/readme-loop.en.svg" alt="A top lane that only ships work and a lower Experience Loop lane that preserves judgment, evidence, reflection, and reusable experience" width="100%">
@@ -64,11 +62,9 @@ https://github.com/VmillHut/experience-loop
 Follow the repository-specific safety and acceptance contract in `docs/AI_INSTALL.en.md`.
 ```
 
-| Stage | What the Agent completes |
-| --- | --- |
-| <strong>01 · Resolve the host</strong> | Discover the current host's live directories, discovery behavior, and capability boundaries. |
-| <strong>02 · Install and verify</strong> | Perform safe writes with the deterministic installer, then verify complete files, runtime health, and actual host discovery. |
-| <strong>03 · Optional onboarding</strong> | Offer one short questionnaire that may be skipped entirely, plus an optional two-minute conversational tutorial. |
+1. **Resolve the host** — The Agent discovers the current host's live directories, discovery behavior, and capability boundaries.
+2. **Install and verify** — A deterministic installer performs safe writes, then verifies complete files, runtime health, and actual host discovery.
+3. **Optional onboarding** — One short questionnaire may be skipped entirely, followed by an optional two-minute conversational tutorial.
 
 After installation, only one choice remains:
 
@@ -122,7 +118,7 @@ These responses are examples, not a closed menu. `auto` has no fixed question co
 </picture>
 
 | Mode | Who controls the intensity | What you actually experience |
-| --- | --- | --- |
+| :---: | --- | --- |
 | <strong><code>auto</code><br>Default intelligence</strong> | The Agent continuously decides from current evidence | It may stay quiet throughout, explain, ask an optional question, wait for one key judgment, or run a short practice loop. |
 | <strong><code>focus</code><br>Deliberate practice</strong> | You lock one capability goal | Bounded prediction, trade-off, review, and debrief around that goal; the Agent still implements and validates. |
 | <strong><code>deep</code><br>Full exploration</strong> | You explicitly authorize full depth | Build a model, compare options, predict failure, review the design, and correct or transfer judgment from evidence. |
@@ -146,7 +142,7 @@ A one-time switch affects only the current task. `focus` and `deep` are never en
 ## 05 · Real use: what you actually experience
 
 | Situation | What you can say | How Experience Loop responds |
-| --- | --- | --- |
+| :---: | --- | --- |
 | <strong>Routine<br>change</strong> | `Implement this cache invalidation requirement. It needs to reach QA this week.` | If acceptance is clear, it delivers directly. Only a worthwhile boundary judgment triggers extra evidence or one minimal checkpoint. |
 | <strong>High-value<br>judgment</strong> | `We have intermittent duplicate charges in production. Find the cause and fix it.` | When evidence can distinguish key causes and recovery is not urgent, it asks for one verifiable prediction and genuinely waits. |
 | <strong><code>focus</code><br>Deliberate practice</strong> | `Use focus. I want to practice test design.` | A short, bounded sequence of prediction, review, and debrief stays centered on one capability goal. |
@@ -191,7 +187,7 @@ This debrief is not exclusive to `deep`. `auto` detects whether it is worthwhile
 There is no settings screen to maintain. Profiles, sources, data, and reference projects enter on demand through plain language:
 
 | Capability | One-sentence example | Default boundary |
-| --- | --- | --- |
+| :---: | --- | --- |
 | <strong>Update<br>profile</strong> | `Remember: I have about four years of backend experience. I want to strengthen reliability judgment; lead with conclusions and let me predict first at high-value seams.` | Only named fields are updated. Missing information is never invented, and a profile cannot lower engineering standards or validation coverage. |
 | <strong>Temporary<br>source</strong> | `Use this article to review the current design: C:\Docs\article.pdf` | Only task-relevant parts are read by default; durable Knowledge Lens ingestion requires your agreement. |
 | <strong>Structured<br>data</strong> | `Analyze C:\Data\reviews.csv and identify the test categories we miss most often.` | CSV, JSON, spreadsheets, and logs serve the current task by default; no database or configuration is forced. |
@@ -206,9 +202,9 @@ Title, years, and project scale are context for explanation and practice entry p
 > [!IMPORTANT]
 > Once Experience Loop is enabled, the Agent's task capability can only stay the same or improve. The learning layer must never degrade it.
 
-| Task quality | Position of the learning layer | Capability evidence |
-| --- | --- | --- |
-| Implementation, tools, architecture, verification, and material-risk reporting cannot be weakened by profiles or learning goals. | Profiles, sources, the experience ledger, and project scans stay off the delivery-critical path; an auxiliary failure cannot sink a successful task. | Only verifiable predictions, decisions, corrections, real outcomes, and later transfer count as growth. |
+- **Task quality** — Implementation, tools, architecture, verification, and material-risk reporting cannot be weakened by profiles or learning goals.
+- **Position of the learning layer** — Profiles, sources, the experience ledger, and project scans stay off the delivery-critical path; an auxiliary failure cannot sink a successful task.
+- **Capability evidence** — Only verifiable predictions, decisions, corrections, real outcomes, and later transfer count as growth.
 
 <details>
 
@@ -242,11 +238,9 @@ Its job is simpler to state and harder to do: **keep the few judgments that shap
 
 ### Data and privacy
 
-| Scope | Default behavior |
-| --- | --- |
-| **Storage** | Personal profiles, project profiles, experience records, and Knowledge Lens data live under `~/.experience-loop`, separate from the Skill installation and project repositories. |
-| **Lifecycle** | Installing, upgrading, or uninstalling the Skill never deletes personal data automatically. |
-| **Permission boundary** | Project scans, source ingestion, and indexing require explicit permission. Imported content is untrusted evidence, never Agent instruction or tool authorization. |
+- **Storage** — Personal profiles, project profiles, experience records, and Knowledge Lens data live under `~/.experience-loop`, separate from the Skill installation and project repositories.
+- **Lifecycle** — Installing, upgrading, or uninstalling the Skill never deletes personal data automatically.
+- **Permission boundary** — Project scans, source ingestion, and indexing require explicit permission. Imported content is untrusted evidence, never Agent instruction or tool authorization.
 
 See [Safety and privacy](references/safety-and-privacy.md) and [SECURITY.md](SECURITY.md) for the complete rules.
 
@@ -258,13 +252,11 @@ Installation must continue through the receipt's validation and onboarding steps
 
 ### Further reading
 
-| What you want to understand | Start here |
-| --- | --- |
-| **Installation and hosts** | [AI installation protocol](docs/AI_INSTALL.en.md) · [Dynamic host contract](references/host-compatibility.md) |
-| **Actual Agent behavior** | [Core Skill instructions](SKILL.md) · [Adaptive workflow](references/workflow.md) |
-| **Onboarding and growth model** | [Conversational onboarding](references/onboarding.md) · [Capability compass](references/capability-compass.md) |
-| **Sources and privacy** | [Knowledge Lens](references/knowledge-lens.md) · [Safety and privacy](references/safety-and-privacy.md) |
-| **Project maintenance** | [Changelog](CHANGELOG.md) · [Contributing](CONTRIBUTING.md) · [Security](SECURITY.md) |
+- **Installation and hosts** — [AI installation protocol](docs/AI_INSTALL.en.md) · [Dynamic host contract](references/host-compatibility.md)
+- **Actual Agent behavior** — [Core Skill instructions](SKILL.md) · [Adaptive workflow](references/workflow.md)
+- **Onboarding and growth model** — [Conversational onboarding](references/onboarding.md) · [Capability compass](references/capability-compass.md)
+- **Sources and privacy** — [Knowledge Lens](references/knowledge-lens.md) · [Safety and privacy](references/safety-and-privacy.md)
+- **Project maintenance** — [Changelog](CHANGELOG.md) · [Contributing](CONTRIBUTING.md) · [Security](SECURITY.md)
 
 ---
 
