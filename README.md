@@ -31,7 +31,7 @@
 ## 01 · 30 秒看懂它
 
 <blockquote>
-  <p><small><strong>Experience Loop 是一个 Agent Skill：Agent 照常完成任务；它只在真正值得的节点，把工程判断留给你，并用真实证据让这些判断越来越准。</strong></small></p>
+  <p><small><small><strong>Experience Loop 是一个 Agent Skill：Agent 照常交付；只在关键节点保留你的工程判断，并用真实证据让它越来越准。</strong></small></small></p>
 </blockquote>
 
 - <strong>Agent 继续负责：</strong>分析、实现、测试、验证与交付。
