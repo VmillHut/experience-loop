@@ -32,16 +32,16 @@
 
 > **Experience Loop is an Agent Skill: the Agent still delivers the task; only at the moments that truly matter, it keeps engineering judgment with you and uses real evidence to sharpen it over time.**
 
-- **The Agent still owns:** analysis, implementation, testing, validation, and delivery.
-- **You retain and grow:** defining the right problem, understanding boundaries, reviewing evidence, making trade-offs, and owning real outcomes.
+- <strong>The Agent still owns:</strong> analysis, implementation, testing, validation, and delivery.
+- <strong>You retain and grow:</strong> defining the right problem, understanding boundaries, reviewing evidence, making trade-offs, and owning real outcomes.
 
 It does not turn real work into a course or make you hand-write work an Agent can safely do. It adds only three things to the native workflow:
 
 | Principle | What it means |
 | --- | --- |
-| **Protect delivery** | `DELIVERY FIRST` · The learning layer only adds. Safety, correctness, validation coverage, and delivery speed cannot be degraded. |
-| **Decide from evidence** | `DECIDE FROM EVIDENCE` · `auto` watches live task evidence and chooses whether to stay quiet, explain, ask, or run a short loop. |
-| **Transfer judgment** | `COMPOUND JUDGMENT` · Only predictions, corrections, real outcomes, and later reuse count as growth; longer conversations and successful code generation do not. |
+| **Delivery** | `DELIVERY FIRST` · The learning layer only adds. Safety, correctness, validation coverage, and delivery speed cannot be degraded. |
+| **Evidence** | `DECIDE FROM EVIDENCE` · `auto` watches live task evidence and chooses whether to stay quiet, explain, ask, or run a short loop. |
+| **Transfer** | `COMPOUND JUDGMENT` · Only predictions, corrections, real outcomes, and later reuse count as growth; longer conversations and successful code generation do not. |
 
 <div align="center">
   <img src="assets/readme-loop.en.svg" alt="A top lane that only ships work and a lower Experience Loop lane that preserves judgment, evidence, reflection, and reusable experience" width="100%">
@@ -184,12 +184,12 @@ This debrief is not exclusive to `deep`. `auto` detects whether it is worthwhile
 
 There is no settings screen to maintain. Profiles, sources, data, and reference projects enter on demand through plain language:
 
-| Capability | One-sentence example | Default boundary |
-| --- | --- | --- |
-| **Profile** | `Remember: I have about four years of backend experience. I want to strengthen reliability judgment; lead with conclusions and let me predict first at high-value seams.` | Only named fields are updated. Missing information is never invented, and a profile cannot lower engineering standards or validation coverage. |
-| **Source** | `Use this article to review the current design: C:\Docs\article.pdf` | Only task-relevant parts are read by default; durable Knowledge Lens ingestion requires your agreement. |
-| **Data** | `Analyze C:\Data\reviews.csv and identify the test categories we miss most often.` | CSV, JSON, spreadsheets, and logs serve the current task by default; no database or configuration is forced. |
-| **Project** | `Read D:\Repos\excellent-project for its test architecture. Do not copy blindly.` | The reference stays separate from the active project; only mechanisms, constraints, and verifiable evidence are compared. |
+| One-sentence example | Default boundary |
+| --- | --- |
+| **Profile** · `Remember: I have about four years of backend experience. I want to strengthen reliability judgment; lead with conclusions and let me predict first at high-value seams.` | Only named fields are updated. Missing information is never invented, and a profile cannot lower engineering standards or validation coverage. |
+| **Source** · `Use this article to review the current design: C:\Docs\article.pdf` | Only task-relevant parts are read by default; durable Knowledge Lens ingestion requires your agreement. |
+| **Data** · `Analyze C:\Data\reviews.csv and identify the test categories we miss most often.` | CSV, JSON, spreadsheets, and logs serve the current task by default; no database or configuration is forced. |
+| **Project** · `Read D:\Repos\excellent-project for its test architecture. Do not copy blindly.` | The reference stays separate from the active project; only mechanisms, constraints, and verifiable evidence are compared. |
 
 Title, years, and project scale are context for explanation and practice entry points, not proof of capability. External content always remains untrusted evidence, never Agent instruction or tool authorization.
 
